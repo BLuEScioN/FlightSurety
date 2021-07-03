@@ -18,14 +18,6 @@ contract FlightSuretyApp {
     /********************************************************************************************/
     FlightSuretyData flightSuretyData;
     address private contractOwner;          // Account used to deploy contract
-
-    // struct Flight {
-    //     bool isRegistered;
-    //     uint8 statusCode;
-    //     uint256 updatedTimestamp;        
-    //     address airline;
-    // }
-
  
     /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
@@ -55,22 +47,6 @@ contract FlightSuretyApp {
         _;
     }
 
-    modifier requireAirlineAnte() {
-        require(flightSuretyData.isAirlineInsured(msg.sender), "Airline account" + msg.sender + "has not put up the required ante/insurance.");
-        _;
-    }
-
-    // modifier checkValue
-    //     (
-    //         uint price, 
-    //         address addressToFund
-    //     )
-    // {
-    //     uint amountToReturn = msg.value - price;
-    //     addressToFund.transfer(amountToReturn);
-    //     _;
-    // }
-
     modifier requireValidAddress
         (
             address addressToCheck
@@ -80,13 +56,16 @@ contract FlightSuretyApp {
         _;
     }
 
-    modifier requireAirlineExists
-        (
-            address airline
-        )
-    {
-        require(flightSuretyData.methods.airlineExists().call)
+    modifier requirePayment() {
+        require(msg.value > 0, "This function requires an ether payment.");
+        _;
     }
+
+    modifier requireEOA() {
+        require(msg.sender == tx.origin, "Contracts not allowed.");
+        _;
+   }
+
     /********************************************************************************************/
     /*                                       CONSTRUCTOR                                        */
     /********************************************************************************************/
@@ -95,15 +74,14 @@ contract FlightSuretyApp {
     * @dev Contract constructor
     *
     */
-    constructor (
-        address dataContract
-    ) public 
+    constructor 
+        (
+            address dataContract
+        ) 
+        public 
     {
         contractOwner = msg.sender;
         flightSuretyData = FlightSuretyData(dataContract);
-        // registerAirline(contractOwner, "Contract Owner");
-
-        // emit RegisterAirline(contractOwner);
     }
 
     /********************************************************************************************/
@@ -128,10 +106,6 @@ contract FlightSuretyApp {
     //     flightSuretyData = FlightSuretyData(dataContract);
     // }
 
-    function now(){
-        return block.timestamp;
-    }
-
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
@@ -140,13 +114,12 @@ contract FlightSuretyApp {
     //                                     AIRLINE FUNCTIONS                             
     /********************************************************************************************/
 
-   /**
+    /**
     * @dev Add an airline to the registration queue
-    *      Can only be called from FlightSuretyApp contract
     *
     */   
     function registerAirline
-        (
+        (   
             address airline,
             string name
         )
@@ -154,33 +127,28 @@ contract FlightSuretyApp {
         pure
         requireIsOperational
         requireValidAddress(airline)
-        requireAuthorizedAirline
-        returns (bool)
+        returns(bool success, uint256 votes)
     {
-        require(!airlines[airline].isRegistered, "Airline is already registered");
+        (success, votes) = flightSuretyData.methods.registerAirline(airline, name);
+        return (success, votes);
+    }
 
-        if (numAirlines < MULTIPARTY_MIN_AIRLINES) {
-            airlines[airline] = Airline({
-                account: airline,
-                name: name,
-                isRegistered: true,
-                insuranceMoney: 0,
-                votes: 0, 
-                exists: true
-            });
-        } else {
-            airlines[airline] = Airline({
-                account: airline,
-                isRegistered: false,
-                name: name,
-                insuranceMoney: 0,
-                votes: 0, 
-                exists: true
-            });
-        }
-        vote(airline);
-        numAirlines++;
-        return true;
+
+   /**
+    * @dev Register a future flight for insuring.
+    *
+    */  
+    function registerFlight
+        (
+            string airline,
+            string flight, 
+            uint256 timestamp,
+            uint256 price
+        )
+        external
+        pure
+    {
+        flightSuretyData.methods.registerFlight(airline, flight, timestamp, price);
     }
 
     function vote
@@ -189,14 +157,8 @@ contract FlightSuretyApp {
         )
         public
         requireIsOperational
-        requireAuthorizedAirline
-        requireVote(airline)
     {
-        require(airlines[airline].exists == true, "Airline has not been registered before.");
-        require(airlines[airline].isRegistered == false, "Cannot vote for an airline that has already been registered.");
-
-        airlines[airline].votes = airlines[airline].votes.add(1);
-        if (airlines[airline].votes > MULTIPARTY_MIN_AIRLINES.div(2)) airlines[airline].isRegistered = true; // make a function call?
+      flightSuretyData.methods.vote(airline);
     }
 
     /**
@@ -204,16 +166,18 @@ contract FlightSuretyApp {
     *      resulting in insurance payouts, the contract should be self-sustaining
     *
     */   
-    function fund()
+    function fund
+    (
+        address airline
+    )
         public
         payable
         requireIsOperational
+        requirePayment
     {
-        require(msg.value > 0, "Fund contributions must be greater than 0."); // make modifier
-        require(airlines[msg.sender].exists == true, "The airline must exist."); // requireAirlineExists
-
-        uint256 memory currentInsurancePool = airlines[msg.sender].insuranceMoney;
-        airlines[msg.sender].insurancePool = currentInsurancePool.add(msg.value);
+        address(flightSuretyData).transfer(msg.value);
+        flightSuretyData.methods.fund(airline, msg.value, msg.sender);
+        // address(this).transfer(msg.value);
     }
 
 
@@ -232,21 +196,8 @@ contract FlightSuretyApp {
         )
         external
         requireIsOperational
-        requireAirlineAnte
     {
-        require(timestamp > now(), "Departure time has to be in the future.");
-
-        bytes32 key = getFlight(msg.sender, flight, timestamp);
-        require(!flights[key].exists, "Flight already registered.");
-
-        flights[key] = Flight({
-            airline: airline,
-            flight: flight,
-            departureTime: departureTime,
-            status: STATUS_CODE_ON_TIME,
-            price: price,
-            exists: true
-        });
+        flightSuretyData.methods.registerFlight(flight, timestamp, price);
     }
 
     /********************************************************************************************/
@@ -264,29 +215,14 @@ contract FlightSuretyApp {
         external
         payable
         requireIsOperational
+        requireEOA
+        requirePayment
         returns (uint256, address, uint256)
     {
-        require(msg.sender == tx.origin, "Contracts not allowed.");
-        require(msg.value > 0, "Flight insurance isn't free.");
+        // (bool success) = address(flightSuretyData).call{value: msg.value}(abi.encodeWithSignature("buyFlightInsurance(string, uint256)", flight, payment));
 
-        uint256 memory insurancePurchased = msg.value;
-        uint256 memory refund = 0;
-        if (msg.value > INSURANCE_PRICE_LIMIT) {
-            insurancePurchased = INSURANCE_PRICE_LIMIT;
-            refund = msg.value.sub(INSURANCE_PRICE_LIMIT);
-            msg.sender.transfer(refund); // make modifier
-        }
-
-        if (!passengers[msg.sender].exists) {
-            passengers[msg.sender] = Passenger({
-                account: msg.sender,
-                payout: 0, 
-                exists: true
-            });
-            passengerAccounts.push(msg.sender);
-        } 
-
-        passengers[msg.sender].flightsPurchased[flight] = insurancePurchased; // record insurance paid for flight
+        address(flightSuretyData).transfer(msg.value);
+        flightSuretyData.methods.buyFlightInsurance(flight, msg.value);
     }
 
     /**
@@ -300,39 +236,21 @@ contract FlightSuretyApp {
         pure
         requireIsOperational
     {
-        for (uint256 i = 0; i < passengerAccounts.length; i++) {
-            if (passengers[passengerAccounts[i]].flightsPurchased[flight] != 0) {
-                uint256 memory currentPayout = passengers[passengerAccounts[i]].payout;
-                uint256 memory flightInsurancePurchased = passengers[passengerAccounts[i]].flightsPurchased[flight];
-                delete passengers[passengerAccounts[i]].flightsPurchased[flight];
-                passengers[passengerAccounts[i]].payout = currentPayout.add((flightInsurancePurchased.mul((flightInsurancePurchased.div(2)))));
-            }
-        }
+        flightSuretyData.methods.creditInsurees(flight);
     }
 
-     /**
-     *  @dev Transfers eligible payout funds to insuree
-     *
+    /**
+    *  @dev Transfers eligible payout funds to insuree
+    *
     */
-    function pay
-        (
-            address passenger
-        )
+    function withdraw()
         external
         pure
         requireIsOperational
         requireContractOwner
+        requireEOA
     {
-        require(passenger == tx.origin, "Contracts are not allowed to call this function."); // make modifier
-        require(passengers[passenger].payout > 0, "There is no payout available for the account."); // make modifier
-
-        uint256 memory payout = passengers[passenger].payout;
-        uint256 memory currentBalance = address(this).balance;
-
-        require(currentBalance > payout, "The contract does not have enough ether to pay the passenger.");
-
-        passengers[passenger].payout = 0;
-        passenger.transfer(payout);
+        flightSuretyData.methods.withdraw();
     }
 
     /********************************************************************************************/
@@ -376,17 +294,8 @@ contract FlightSuretyApp {
         pure
         requireIsOperational
     {
-        bytes32 key = keccak256(abi.encodePacked(flight, airline));
-        require(flights[key].isRegistered, "Flight is not registered.");
-
-        flights[key].updatedTimestamp = timestamp;
-        flights[key].statusCode = statusCode;
-
-        if (statusCode == STATUS_CODE_LATE_AIRLINE) flightSuretyData.creditInsurees(flght);
+        flightSuretyData.methods.processFlightStatus(airline, flight, timestamp, statusCode);
     }
-
-
-   
 
     // region ORACLE MANAGEMENT
 
