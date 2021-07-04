@@ -1,6 +1,8 @@
-pragma solidity ^0.8.6;
+pragma solidity >= 0.5.0;
 
-import "../node_modules/openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
+// import "../node_modules/openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
+import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
+
 
 contract FlightSuretyData {
     using SafeMath for uint256;
@@ -36,15 +38,17 @@ contract FlightSuretyData {
     }
 
     struct Flight {
-      bool exists;
-      uint8 statusCode;
-    //   bool registered;
-      uint256 departuretime;
-      uint256 price;
-    //   mapping(address => bool) didByInsurance;
+        string airline;
+        string flight;
+        uint256 departureTime;
+        uint256 price;
+        uint8 statusCode;
+        bool isRegistered;
+        bool exists;
     }
+    mapping(string => Flight) private flights;
 
-    mapping(bytes32 => Flight) private flights;
+    // mapping(bytes32 => Flight) private flights;
 
     struct Passenger {
         address account;
@@ -121,7 +125,7 @@ contract FlightSuretyData {
     */
     modifier requireAuthorizedAirline()
     {
-        require(authorizedAirlines[msg.sender] == true, "Caller is not an authorized airline.");
+        require(authorizedAirlines[msg.sender] == 1, "Caller is not an authorized airline.");
         _;
     }
 
@@ -130,7 +134,7 @@ contract FlightSuretyData {
             address airline
         ) 
     {
-        require(airlineVotes[msg.sender][airline] == 0, "The registered airline/msg.sender has already voted to authorize the airline" + airline + ".");
+        require(airlineVotes[msg.sender][airline] == 0, "The registered airline/msg.sender has already voted to authorize the airline.");
         _;
     }
 
@@ -156,21 +160,21 @@ contract FlightSuretyData {
 
    modifier requireRegisteredFlight
         (
-            string calldata flight
+            string memory flight
         )
     {
-        require(isFlightRegistered(), "Flight is not registered.");
+        require(isFlightRegistered(flight), "Flight is not registered.");
         _;
     }
 
     modifier requireAirlineInsurance() {
-        require(isAirlineInsured(msg.sender), "Airline account" + msg.sender + "has not put up the required insurance.");
+        require(isAirlineInsured(msg.sender), "Airline has not put up the required insurance.");
         _;
     }
 
     modifier requireValidDepartureTime
         (
-            uint256 calldata departureTime
+            uint256 departureTime
         )
     {
         require(departureTime > now, "Departure time cannot be in the past.");
@@ -202,7 +206,7 @@ contract FlightSuretyData {
     */    
     function setOperatingStatus
         (
-            bool calldata mode
+            bool mode
         ) 
         external
         requireContractOwner 
@@ -215,13 +219,13 @@ contract FlightSuretyData {
     */    
     function authorizeAirline
         (
-            address calldata airline
+            address airline
         )
         public
         requireIsOperational
         requireAuthorizedAirline
     {
-        authorizedAirlines[airline] == true;
+        authorizedAirlines[airline] == 1;
     }
 
     /**
@@ -229,7 +233,7 @@ contract FlightSuretyData {
     */    
     function deauthorizeAirline
         (
-            address calldata airline
+            address airline
         )
         public
         requireIsOperational
@@ -240,7 +244,7 @@ contract FlightSuretyData {
 
     function isAirlineInsured
         (
-            address calldata airline
+            address airline
         ) 
         public
         requireIsOperational
@@ -252,7 +256,7 @@ contract FlightSuretyData {
     /** Returns the number of votes an airline has received */
     function getAirlineVotes
         (
-            address calldata airline
+            address airline
         ) 
         public
         returns (uint256)
@@ -262,31 +266,30 @@ contract FlightSuretyData {
 
     function doesAirlineExist
         (
-            address calldata airline
+            address airline
         )
         public
         requireIsOperational
         returns (bool)
     {
-        if (airlines[airline].exists == 1) return true;
+        if (airlines[airline].exists == true) return true;
         else return false;
     }
 
     function isAirlineRegistered
         (
-            address calldata airline
+            address airline
         )
         public
         requireIsOperational
         returns (bool)
     {
-        if (airlines[airline].isRegistered == 1) return true;
-        else return false;
+        return airlines[airline].isRegistered;
     }
 
     function doesAirlineMeetAuthorizationRequirements
         (
-            address calldata airline
+            address airline
         )
         internal
         requireIsOperational
@@ -298,10 +301,11 @@ contract FlightSuretyData {
 
     function isFlightRegistered
         (
-            string calldata flight
+            string memory flight
         )
         public 
         requireIsOperational
+        returns (bool)
     {
         return flights[flight].isRegistered;
     }
@@ -322,7 +326,7 @@ contract FlightSuretyData {
     */   
     function registerAirline
         (
-            address calldata airline,
+            address airline,
             string calldata name
         )
         external
@@ -330,7 +334,7 @@ contract FlightSuretyData {
         requireAuthorizedAirline
         returns (bool, uint256)
     {
-        require(!doesAirlineExist(), "The airline already exists.");
+        require(!doesAirlineExist(airline), "The airline already exists.");
         require(!isAirlineRegistered(airline), "Airline is already registered");
 
         if (numAirlines < MULTIPARTY_MIN_AIRLINES) {
@@ -361,7 +365,7 @@ contract FlightSuretyData {
 
     function vote
         (
-            address calldata airline
+            address airline
         )
         public
         requireIsOperational
@@ -373,12 +377,12 @@ contract FlightSuretyData {
 
         airlines[airline].votes = airlines[airline].votes.add(1);
 
-        if (numAirlines >= MULTIPARTY_MIN_AIRLINES && airlines[airline].votes > MULTIPARTY_MIN_AIRLINES.div(2)) {
+        if (numAirlines >= MULTIPARTY_MIN_AIRLINES && airlines[airline].votes > uint256(MULTIPARTY_MIN_AIRLINES).div(2)) {
             airlines[airline].isRegistered = true; // make a function call?
             emit AirlineRegistered(airline, airlines[airline].name);
         }
 
-        if (doesAirlineMeetAuthorizationRequirements) authorizedAirlines.push(airline);
+        if (doesAirlineMeetAuthorizationRequirements(airline)) authorizedAirlines[airline] == 1;
     }
 
     /**
@@ -388,9 +392,8 @@ contract FlightSuretyData {
     */   
     function fund
         (
-            address calldata airline,
-            uint256 calldata payment,
-            address calldata funder
+            address airline,
+            uint256 payment
         )
         public
         payable
@@ -399,7 +402,7 @@ contract FlightSuretyData {
     {
         require(airlines[airline].exists, "The airline does not exist.");
 
-        uint256 memory currentInsuranceMoney = airlines[airline].insuranceMoney;
+        uint256 currentInsuranceMoney = airlines[airline].insuranceMoney;
         airlines[airline].insuranceMoney = currentInsuranceMoney.add(payment);
     }
 
@@ -415,13 +418,13 @@ contract FlightSuretyData {
         (   
             string calldata airline,
             string calldata flight, 
-            uint256 calldata departureTime,
-            uint256 calldata price
+            uint256 departureTime,
+            uint256 price
         )
         external
         requireIsOperational
         requireAuthorizedAirline
-        requireValidDepartureTime
+        requireValidDepartureTime(departureTime)
     {
         // bytes32 key = getFlight(msg.sender, flight, timestamp);
         require(!flights[flight].exists, "Flight already registered.");
@@ -430,8 +433,9 @@ contract FlightSuretyData {
             airline: airline,
             flight: flight,
             departureTime: departureTime,
-            status: STATUS_CODE_ON_TIME,
             price: price,
+            statusCode: STATUS_CODE_ON_TIME,
+            isRegistered: true,
             exists: true
         });
     }
@@ -460,8 +464,8 @@ contract FlightSuretyData {
     function buyFlightInsurance
         (
             string calldata flight,
-            uint256 calldata payment,
-            address calldata passenger
+            uint256 payment,
+            address payable passenger
         )
         external
         payable
@@ -469,8 +473,8 @@ contract FlightSuretyData {
         // returns (uint256, address, uint256)
     {
 
-        uint256 memory insurancePurchased = payment;
-        uint256 memory refund = 0;
+        uint256 insurancePurchased = payment;
+        uint256 refund = 0;
 
         if (payment > INSURANCE_PRICE_LIMIT) {
             insurancePurchased = INSURANCE_PRICE_LIMIT;
@@ -495,20 +499,21 @@ contract FlightSuretyData {
     */
     function creditInsurees
         (
-            string calldata flight
+            string memory flight
         )
         public
-        pure
         requireIsOperational
     {
         for (uint256 i = 0; i < passengerAccounts.length; i++) {
             if (passengers[passengerAccounts[i]].flightsPurchased[flight] != 0) {
-                uint256 memory currentPayout = passengers[passengerAccounts[i]].payout;
-                uint256 memory flightInsurancePurchased = passengers[passengerAccounts[i]].flightsPurchased[flight];
+                uint256 currentPayout = passengers[passengerAccounts[i]].payout;
+                uint256 flightInsurancePurchased = passengers[passengerAccounts[i]].flightsPurchased[flight];
                 delete passengers[passengerAccounts[i]].flightsPurchased[flight];
                 passengers[passengerAccounts[i]].payout = currentPayout.add((flightInsurancePurchased.mul((flightInsurancePurchased.div(2)))));
             }
         }
+
+        // Check if any airlines have lost their authorized status because they had to payout from their insurance money and they have less than they are suppose to
     }
 
      /**
@@ -517,18 +522,17 @@ contract FlightSuretyData {
     */
     function withdraw()
         external
-        pure
         requireIsOperational
         requireEOA
         requirePassengerExists
         requireAvailableCredit
     {
-        uint256 memory credit = passengers[msg.sender].payout;
-        uint256 memory currentBalance = address(this).balance;
+        uint256 credit = passengers[msg.sender].payout;
+        uint256 currentBalance = address(this).balance;
 
         require(currentBalance > credit, "The contract does not have enough ether to pay the passenger.");
 
-        passengers[msg.sender].credit = 0;
+        passengers[msg.sender].payout = 0;
         msg.sender.transfer(credit);
     }
 
@@ -538,15 +542,13 @@ contract FlightSuretyData {
     
     function processFlightStatus
         (
-            address calldata airline,
             string calldata flight,
-            uint256 calldata departureTime,
-            uint8 calldata statusCode
+            uint256 departureTime,
+            uint8 statusCode
         )
-        internal
-        pure
+        external
         requireIsOperational
-        requireRegisteredFlight
+        requireRegisteredFlight(flight)
     {
         flights[flight].departureTime = departureTime;
         flights[flight].statusCode = statusCode;
@@ -576,11 +578,11 @@ contract FlightSuretyData {
     * @dev Fallback function for funding smart contract.
     *
     */
-    // function () 
-    //     external 
-    //     payable 
-    // {
-    //     fund();
-    // }
+    function () 
+        external 
+        payable 
+    {
+        // fund();
+    }
 }
 

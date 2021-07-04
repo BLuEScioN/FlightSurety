@@ -1,10 +1,12 @@
-pragma solidity ^0.8.6;
+pragma solidity >= 0.5.0;
 
 // It's important to avoid vulnerabilities due to numeric overflow bugs
 // OpenZeppelin's SafeMath library, when used correctly, protects agains such bugs
 // More info: https://www.nccgroup.trust/us/about-us/newsroom-and-events/blog/2018/november/smart-contract-insecurity-bad-arithmetic/
 
-import "../node_modules/openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
+// import "../node_modules/openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
+import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
+
 import "./FlightSuretyData.sol";
 
 /************************************************** */
@@ -76,7 +78,7 @@ contract FlightSuretyApp {
     */
     constructor 
         (
-            address dataContract
+            address payable dataContract
         ) 
         public 
     {
@@ -90,7 +92,7 @@ contract FlightSuretyApp {
 
     function isOperational() 
         public 
-        pure 
+        view 
         returns(bool) 
     {
         return flightSuretyData.isOperational();  // Modify to call data contract's status
@@ -121,34 +123,15 @@ contract FlightSuretyApp {
     function registerAirline
         (   
             address airline,
-            string name
+            string calldata name
         )
         external
-        pure
         requireIsOperational
         requireValidAddress(airline)
         returns(bool success, uint256 votes)
     {
-        (success, votes) = flightSuretyData.methods.registerAirline(airline, name);
+        (success, votes) = flightSuretyData.registerAirline(airline, name);
         return (success, votes);
-    }
-
-
-   /**
-    * @dev Register a future flight for insuring.
-    *
-    */  
-    function registerFlight
-        (
-            string airline,
-            string flight, 
-            uint256 timestamp,
-            uint256 price
-        )
-        external
-        pure
-    {
-        flightSuretyData.methods.registerFlight(airline, flight, timestamp, price);
     }
 
     function vote
@@ -158,7 +141,7 @@ contract FlightSuretyApp {
         public
         requireIsOperational
     {
-      flightSuretyData.methods.vote(airline);
+      flightSuretyData.vote(airline);
     }
 
     /**
@@ -176,8 +159,7 @@ contract FlightSuretyApp {
         requirePayment
     {
         address(flightSuretyData).transfer(msg.value);
-        flightSuretyData.methods.fund(airline, msg.value, msg.sender);
-        // address(this).transfer(msg.value);
+        flightSuretyData.fund(airline, msg.value);
     }
 
 
@@ -190,14 +172,15 @@ contract FlightSuretyApp {
     */  
     function registerFlight
         (   
-            string flight, 
-            uint256 timestamp,
+            string calldata airline,
+            string calldata flight, 
+            uint256 departureTime,
             uint256 price
         )
         external
         requireIsOperational
     {
-        flightSuretyData.methods.registerFlight(flight, timestamp, price);
+        flightSuretyData.registerFlight(airline, flight, departureTime, price);
     }
 
     /********************************************************************************************/
@@ -210,7 +193,7 @@ contract FlightSuretyApp {
     */   
     function buyFlightInsurance
         (
-            string flight
+            string calldata flight
         )
         external
         payable
@@ -222,7 +205,7 @@ contract FlightSuretyApp {
         // (bool success) = address(flightSuretyData).call{value: msg.value}(abi.encodeWithSignature("buyFlightInsurance(string, uint256)", flight, payment));
 
         address(flightSuretyData).transfer(msg.value);
-        flightSuretyData.methods.buyFlightInsurance(flight, msg.value);
+        flightSuretyData.buyFlightInsurance(flight, msg.value, msg.sender);
     }
 
     /**
@@ -230,13 +213,12 @@ contract FlightSuretyApp {
     */
     function creditInsurees
         (
-            string flight
+            string calldata flight
         )
         external
-        pure
         requireIsOperational
     {
-        flightSuretyData.methods.creditInsurees(flight);
+        flightSuretyData.creditInsurees(flight);
     }
 
     /**
@@ -245,12 +227,11 @@ contract FlightSuretyApp {
     */
     function withdraw()
         external
-        pure
         requireIsOperational
         requireContractOwner
         requireEOA
     {
-        flightSuretyData.methods.withdraw();
+        flightSuretyData.withdraw();
     }
 
     /********************************************************************************************/
@@ -261,7 +242,7 @@ contract FlightSuretyApp {
     function fetchFlightStatus
         (
             address airline,
-            string flight,
+            string calldata flight,
             uint256 timestamp                            
         )
         external
@@ -291,10 +272,9 @@ contract FlightSuretyApp {
             uint8 statusCode
         )
         internal
-        pure
         requireIsOperational
     {
-        flightSuretyData.methods.processFlightStatus(airline, flight, timestamp, statusCode);
+        flightSuretyData.processFlightStatus(flight, timestamp, statusCode);
     }
 
     // region ORACLE MANAGEMENT
@@ -360,7 +340,7 @@ contract FlightSuretyApp {
     function getMyIndexes ()
         view
         external
-        returns(uint8[3])
+        returns(uint8[3] memory)
     {
         require(oracles[msg.sender].isRegistered, "Not registered as an oracle");
 
@@ -378,7 +358,7 @@ contract FlightSuretyApp {
     (
         uint8 index,
         address airline,
-        string flight,
+        string calldata flight,
         uint256 timestamp,
         uint8 statusCode
     )
@@ -406,7 +386,7 @@ contract FlightSuretyApp {
     function getFlightKey
         (
             address airline,
-            string flight,
+            string memory flight,
             uint256 timestamp
         )
         pure
@@ -422,7 +402,7 @@ contract FlightSuretyApp {
             address account         
         )
         internal
-        returns(uint8[3])
+        returns(uint8[3] memory)
     {
         uint8[3] memory indexes;
         indexes[0] = getRandomIndex(account);
