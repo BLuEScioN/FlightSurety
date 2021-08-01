@@ -10,6 +10,7 @@ body {
     opacity: 0.9;
     color: #fff;
     padding: 40px;
+    display: flex;
 }
 
 .top-20 {
@@ -39,4 +40,12 @@ label.form {
 }
 input {
     margin-right: 30px;
+}
+
+.actions { 
+    margin-right: 30px;
+}
+
+.white-border { 
+    border: 2px solid white;
 }

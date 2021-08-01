@@ -19,7 +19,7 @@ contract FlightSuretyApp {
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
     FlightSuretyData flightSuretyData;
-    address private contractOwner;          // Account used to deploy contract
+    address public contractOwner;          // Account used to deploy contract
  
     /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
@@ -128,10 +128,10 @@ contract FlightSuretyApp {
         external
         requireIsOperational
         requireValidAddress(airline)
-        returns(bool success, uint256 votes)
+        returns(bool success, bool isRegistered, uint256 votes)
     {
-        (success, votes) = flightSuretyData.registerAirline(airline, name);
-        return (success, votes);
+        (success, isRegistered, votes) = flightSuretyData.registerAirline(airline, name);
+        return (success, isRegistered, votes);
     }
 
     function vote
@@ -310,7 +310,7 @@ contract FlightSuretyApp {
     // Key = hash(index, flight, timestamp)
     mapping(bytes32 => ResponseInfo) private oracleResponses;
 
-    // Event fired each time an oracle submits a response
+    // Event fired each tim``e an oracle submits a response
     event FlightStatusInfo(address airline, string flight, uint256 timestamp, uint8 status);
 
     event OracleReport(address airline, string flight, uint256 timestamp, uint8 status);
