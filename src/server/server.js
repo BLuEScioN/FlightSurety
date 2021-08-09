@@ -15,28 +15,30 @@ import fs from "fs";
 /********************************************************************************************/
 
 // GANACHE
-// const config = Config["localhost"];
-// const ganacheWeb3Provider = new Web3.providers.WebsocketProvider(config.url.replace("http", "ws"));
-// const web3 = new Web3(ganacheWeb3Provider);
+const config = Config["localhost"];
+const ganacheWeb3Provider = new Web3.providers.WebsocketProvider(
+  config.url.replace("http", "ws")
+);
+const web3 = new Web3(ganacheWeb3Provider);
 
 // RINKEBY
-const config = Config["rinkeby"];
-console.log({ rinkebyConfig: config });
-const testMetaMaskMnemonic = fs
-  .readFileSync(".secret-metamask-mnemonic")
-  .toString()
-  .trim();
-console.log({ testMetaMaskMnemonic });
-const infuraKey = fs
-  .readFileSync(".secret-infura-key")
-  .toString()
-  .trim();
-console.log({ infuraKey });
-const hdWalletProvider = new HDWalletProvider(
-  testMetaMaskMnemonic,
-  `wss://rinkeby.infura.io/ws/v3/${infuraKey}`
-);
-const web3 = new Web3(hdWalletProvider);
+// const config = Config["rinkeby"];
+// console.log({ rinkebyConfig: config });
+// const testMetaMaskMnemonic = fs
+//   .readFileSync(".secret-metamask-mnemonic")
+//   .toString()
+//   .trim();
+// console.log({ testMetaMaskMnemonic });
+// const infuraKey = fs
+//   .readFileSync(".secret-infura-key")
+//   .toString()
+//   .trim();
+// console.log({ infuraKey });
+// const hdWalletProvider = new HDWalletProvider(
+//   testMetaMaskMnemonic,
+//   `wss://rinkeby.infura.io/ws/v3/${infuraKey}`
+// );
+// const web3 = new Web3(hdWalletProvider);
 
 // const infurarWeb3Provider = new Web3.providers.WebsocketProvider(
 //   `wss://rinkeby.infura.io/ws/v3/${infuraKey}`

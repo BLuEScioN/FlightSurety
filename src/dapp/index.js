@@ -44,6 +44,7 @@
 import DOM from "./dom";
 import Contract from "./contract";
 import "./flightsurety.css";
+import moment, { unix } from "moment-timezone";
 
 // $(document).ready(function(){
 //     $('[data-toggle="tooltip"]').tooltip().mouseover();
@@ -51,14 +52,7 @@ import "./flightsurety.css";
 // });
 
 (async () => {
-  console.log("INDEX");
-  let result = null;
-
   let contract = new Contract("localhost", () => {
-    DOM.elid("UdacityAir").value = contract.owner;
-    DOM.elid("selected-airline-name").value = "UdacityAir";
-    DOM.elid("selected-airline-address").value = contract.owner;
-
     /********************************************************************************************/
     //                                     LOGGING
     /********************************************************************************************/
@@ -83,126 +77,236 @@ import "./flightsurety.css";
     //                                     AIRLINE ACTIONS
     /********************************************************************************************/
 
+    // REGISTER AIRLINE
+    DOM.elid("register-airline").addEventListener("click", async () => {
+      let address = DOM.elid("airline-address").value;
+      let name = DOM.elid("airline-name").value;
+      contract.registerAirline(address, name);
+    });
+
+    // FUND
+    DOM.elid("fund").addEventListener("click", async () => {
+      let funds = DOM.elid("funds").value;
+      contract.fund(funds);
+    });
+
+    // VOTE
+    DOM.elid("vote").addEventListener("click", async () => {
+      let airlineAddress = DOM.elid("vote-airline-address").value;
+      contract.vote(airlineAddress);
+    });
+
     /********************************************************************************************/
     //                                     FLIGHT ACTIONS
     /********************************************************************************************/
 
+    // REGISTER FLIGHT
+    // DOM.elid("register-flight").addEventListener("click", async () => {
+    //   let flight = DOM.elid("new-flight-number").value;
+    //   let destination = DOM.elid("new-flight-destination").value;
+
+    //   // Write transaction
+    //   contract.registerFlight(flight, destination, (error, result) => {
+    //     display("", "Register new flight", [
+    //       {
+    //         label: "Info:",
+    //         error: error,
+    //         value:
+    //           "Flight code: " +
+    //           result.flight +
+    //           " Destination: " +
+    //           result.destination,
+    //       },
+    //     ]);
+    //     if (!error) {
+    //       flightDisplay(flight, destination, result.address, result.timestamp);
+    //     }
+    //   });
+    // });
+
+    DOM.elid("register-flight-1").addEventListener("click", async () => {
+      let airline = "first airline";
+      let flightId = 1;
+      let departure = "seattle";
+      let arrival = "cincinnati";
+      let date = new Date(2021, 8, 1, 23);
+      let departureTime = moment.tz(date, "America/Los_Angeles").unix();
+      let price = 350;
+      console.log("Register Flight 1", {
+        airline,
+        flightId,
+        departureTime,
+        price,
+      });
+
+      // Write transaction
+      // contract.registerFlight(
+      //   airline,
+      //   flight,
+      //   depatureTime,
+      //   price,
+      //   (error, result) => {
+      //     display("", "Register new flight", [
+      //       {
+      //         label: "Info:",
+      //         error: error,
+      //         value:
+      //           "Flight code: " +
+      //           result.flight +
+      //           " Destination: " +
+      //           result.destination,
+      //       },
+      //     ]);
+      //     if (!error) {
+      //       flightDisplay(
+      //         flight,
+      //         destination,
+      //         result.address,
+      //         result.timestamp
+      //       );
+      //     }
+      //   }
+      // );
+    });
+
+    DOM.elid("register-flight-2").addEventListener("click", async () => {
+      let airline = "first airline";
+      let flightId = 2;
+      let depature = "seattle";
+      let arrival = "nyc";
+      let date = new Date(2021, 8, 1, 7, 50);
+      let departureTime = moment.tz(date, "America/Los_Angeles").unix();
+      console.log("Register Flight 2", {
+        airline,
+        flightId,
+        departureTime,
+        price,
+      });
+      let price = 450;
+
+      // Write transaction
+      // contract.registerFlight(
+      //   airline,
+      //   flight,
+      //   depatureTime,
+      //   price,
+      //   (error, result) => {
+      //     display("", "Register new flight", [
+      //       {
+      //         label: "Info:",
+      //         error: error,
+      //         value:
+      //           "Flight code: " +
+      //           result.flight +
+      //           " Destination: " +
+      //           result.destination,
+      //       },
+      //     ]);
+      //     if (!error) {
+      //       flightDisplay(
+      //         flight,
+      //         destination,
+      //         result.address,
+      //         result.timestamp
+      //       );
+      //     }
+      //   }
+      // );
+    });
+
+    DOM.elid("register-flight-3").addEventListener("click", async () => {
+      let airline = "first airline";
+      let flightId = 3;
+      let depature = "seattle";
+      let arrival = "milan";
+      let date = new Date(2021, 8, 1, 23, 45);
+      let departureTime = moment.tz(date, "America/Los_Angeles").unix();
+      console.log("Register Flight 3", {
+        airline,
+        flightId,
+        departureTime,
+        price,
+      });
+      let price = 685;
+
+      // Write transaction
+      // contract.registerFlight(
+      //   airline,
+      //   flight,
+      //   depatureTime,
+      //   price,
+      //   (error, result) => {
+      //     display("", "Register new flight", [
+      //       {
+      //         label: "Info:",
+      //         error: error,
+      //         value:
+      //           "Flight code: " +
+      //           result.flight +
+      //           " Destination: " +
+      //           result.destination,
+      //       },
+      //     ]);
+      //     if (!error) {
+      //       flightDisplay(
+      //         flight,
+      //         destination,
+      //         result.address,
+      //         result.timestamp
+      //       );
+      //     }
+      //   }
+      // );
+    });
+
+    DOM.elid("register-flight-4").addEventListener("click", async () => {
+      let airline = "first airline";
+      let flightId = 4;
+      let depature = "cincinnati";
+      let arrival = "seattle";
+      let date = new Date(2021, 8, 1, 12);
+      let departureTime = moment.tz(date, "America/New_York").unix();
+      console.log("Register Flight 4", {
+        airline,
+        flightId,
+        departureTime,
+        price,
+      });
+      let price = 250;
+
+      // Write transaction
+      // contract.registerFlight(
+      //   airline,
+      //   flight,
+      //   depatureTime,
+      //   price,
+      //   (error, result) => {
+      //     display("", "Register new flight", [
+      //       {
+      //         label: "Info:",
+      //         error: error,
+      //         value:
+      //           "Flight code: " +
+      //           result.flight +
+      //           " Destination: " +
+      //           result.destination,
+      //       },
+      //     ]);
+      //     if (!error) {
+      //       flightDisplay(
+      //         flight,
+      //         destination,
+      //         result.address,
+      //         result.timestamp
+      //       );
+      //     }
+      //   }
+      // );
+    });
+
     /********************************************************************************************/
     //                                     PASSENGER ACTIONS
     /********************************************************************************************/
-
-    /********************************************************************************************/
-    //                                     ORACLE ACTIONS
-    /********************************************************************************************/
-
-    // Read transaction
-    contract.isOperational((error, result) => {
-      display("DAPP logs", "Check if contract is operational", [
-        { label: "Operational Status", error: error, value: result },
-      ]);
-    });
-
-    // DOM.elid('get-airlines').addEventListener('click', async() => {
-    //     contract.getAirlines();
-    // })
-
-    // User-submitted transaction
-    DOM.elid("register-airline").addEventListener("click", async () => {
-      let address = DOM.elid("airline-address").value;
-      let name = DOM.elid("airline-name").value;
-      let sender = DOM.elid("selected-airline-address").value;
-
-      console.log("You clicked the register airline button");
-      // Write transaction
-      contract.registerAirline(address, name, (error, result) => {
-        // display('Airline registered')
-        if (!error)
-          console.log(`Airline ${name} (${address}) registered`, { result });
-        // display('', 'New airline address and name: ', [ { label: 'Register Airline', error: error, value: result.message} ]);
-        if (error) console.error(error);
-        // else if (result.registered == true) {
-        //     addAirlineOption(name, address);
-        // }
-      });
-    });
-
-    // User-submitted transaction
-    DOM.elid("submit-oracle").addEventListener("click", async () => {
-      let flight = DOM.elid("flight-number").value;
-      let selectedAirlineAddress = DOM.elid("selected-airline-address").value;
-
-      // Write transaction
-      contract.fetchFlightStatus(
-        selectedAirlineAddress,
-        flight,
-        (error, result) => {
-          display("", "Trigger oracles", [
-            {
-              label: "Fetch Flight Status",
-              error: error,
-              value:
-                result.flight + " " + getTimeFromTimestamp(result.timestamp),
-            },
-          ]);
-          let newTime = result.timestamp;
-          displaySpinner();
-          setTimeout(() => {
-            contract.viewFlightStatus(
-              selectedAirlineAddress,
-              flight,
-              (error, result) => {
-                if (!error) {
-                  changeFlightStatus(flight, result, newTime);
-                }
-              }
-            );
-            hideSpinner();
-          }, 2000);
-        }
-      );
-    });
-
-    // User-submitted transaction
-    DOM.elid("fund").addEventListener("click", async () => {
-      let funds = DOM.elid("funds").value;
-      // Write transaction
-      contract.fund(funds, (error, result) => {
-        display("", `Funds added`, [
-          {
-            label: "Funds added to airline: ",
-            error: error,
-            value: result.funds + " wei",
-          },
-        ]);
-        display("", "", [
-          { label: "Airline is active: ", value: result.active },
-        ]);
-      });
-    });
-
-    // User-submitted transaction
-    DOM.elid("register-flight").addEventListener("click", async () => {
-      let flight = DOM.elid("new-flight-number").value;
-      let destination = DOM.elid("new-flight-destination").value;
-
-      // Write transaction
-      contract.registerFlight(flight, destination, (error, result) => {
-        display("", "Register new flight", [
-          {
-            label: "Info:",
-            error: error,
-            value:
-              "Flight code: " +
-              result.flight +
-              " Destination: " +
-              result.destination,
-          },
-        ]);
-        if (!error) {
-          flightDisplay(flight, destination, result.address, result.timestamp);
-        }
-      });
-    });
 
     // User-submitted transaction
     DOM.elid("buy-insurance").addEventListener("click", () => {
@@ -250,68 +354,81 @@ import "./flightsurety.css";
       });
     });
 
-    DOM.elid("airlineDropdownOptions").addEventListener("click", (e) => {
-      e.preventDefault();
+    /********************************************************************************************/
+    //                                     ORACLE ACTIONS
+    /********************************************************************************************/
 
-      DOM.elid("selected-airline-name").value = e.srcElement.innerHTML;
-      DOM.elid("selected-airline-address").value = e.srcElement.value;
-    });
-  });
+    // CHECK STATUS
+    // DOM.elid("statusButton").addEventListener("click", async (e) => {
+    //   e.preventDefault();
+    //   let buttonValue = e.srcElement.value;
+    //   const response = await fetch(
+    //     `http://localhost:3000/api/status/${buttonValue}`
+    //   );
+    //   const myJson = await response.json();
+    //   console.log(myJson);
+    //   display("", "Default flights status change submited to server.", [
+    //     { label: "Server response: ", value: myJson.message },
+    //   ]);
+    // });
 
-  DOM.elid("statusButton").addEventListener("click", async (e) => {
-    e.preventDefault();
-    let buttonValue = e.srcElement.value;
-    const response = await fetch(
-      `http://localhost:3000/api/status/${buttonValue}`
-    );
-    const myJson = await response.json();
-    console.log(myJson);
-    display("", "Default flights status change submited to server.", [
-      { label: "Server response: ", value: myJson.message },
-    ]);
-  });
+    // FETCH FLIGHT STATUS
+    // DOM.elid("submit-oracle").addEventListener("click", async () => {
+    //   let flight = DOM.elid("flight-number").value;
+    //   let selectedAirlineAddress = DOM.elid("selected-airline-address").value;
 
-  DOM.elid("flights-display").addEventListener("click", async (e) => {
-    let flightCode = e.srcElement.innerHTML;
-    console.log(e);
-    console.log(flightCode);
-    flightCode = flightCode
-      .replace("✈ ", "")
-      .replace("<b>", "")
-      .replace("</b>", "");
-    navigator.clipboard.writeText(flightCode).then(
-      function() {
-        console.log(
-          `Async: Copying to clipboard was successful! Copied: ${flightCode}`
-        );
-      },
-      function(err) {
-        console.error("Async: Could not copy text: ", err);
-      }
-    );
+    //   // Write transaction
+    //   contract.fetchFlightStatus(
+    //     selectedAirlineAddress,
+    //     flight,
+    //     (error, result) => {
+    //       display("", "Trigger oracles", [
+    //         {
+    //           label: "Fetch Flight Status",
+    //           error: error,
+    //           value: result.flight + " " + getTimeFromTimestamp(result.timestamp),
+    //         },
+    //       ]);
+    //       let newTime = result.timestamp;
+    //       displaySpinner();
+    //       setTimeout(() => {
+    //         contract.viewFlightStatus(
+    //           selectedAirlineAddress,
+    //           flight,
+    //           (error, result) => {
+    //             if (!error) {
+    //               changeFlightStatus(flight, result, newTime);
+    //             }
+    //           }
+    //         );
+    //         hideSpinner();
+    //       }, 2000);
+    //     }
+    //   );
+    // });
+
+    // ????
+    // DOM.elid("flights-display").addEventListener("click", async (e) => {
+    //   let flightCode = e.srcElement.innerHTML;
+    //   console.log(e);
+    //   console.log(flightCode);
+    //   flightCode = flightCode
+    //     .replace("✈ ", "")
+    //     .replace("<b>", "")
+    //     .replace("</b>", "");
+    //   navigator.clipboard.writeText(flightCode).then(
+    //     function() {
+    //       console.log(
+    //         `Async: Copying to clipboard was successful! Copied: ${flightCode}`
+    //       );
+    //     },
+    //     function(err) {
+    //       console.error("Async: Could not copy text: ", err);
+    //     }
+    //   );
+    // });
   });
 })();
-
-function display(title, description, results) {
-  let displayDiv = DOM.elid("display-wrapper");
-  let section = DOM.section();
-  if (title != "") {
-    section.appendChild(DOM.h2(title));
-  }
-  section.appendChild(DOM.h5(description));
-  results.map((result) => {
-    let row = section.appendChild(DOM.div({ className: "row" }));
-    row.appendChild(DOM.div({ className: "col-sm-4 field" }, result.label));
-    row.appendChild(
-      DOM.div(
-        { className: "col-sm-8 field-value" },
-        result.error ? String(result.error) : String(result.value)
-      )
-    );
-    section.appendChild(row);
-  });
-  displayDiv.append(section);
-}
 
 let flightCount = 0;
 

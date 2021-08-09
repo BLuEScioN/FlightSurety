@@ -31,20 +31,20 @@ module.exports = {
       network_id: "*", //5777
       gas: 6721975,
     },
-    // development: {
-    //   provider: function() {
-    //     return new HDWalletProvider(
-    //       ganacheGuiMnemonic,
-    //       "http://127.0.0.1:8545/",
-    //       0,
-    //       50
-    //     );
-    //   },
-    //   // host: "127.0.0.1",
-    //   // port: 7545,
-    //   network_id: "*", //5777
-    //   gas: 6721975,
-    // },
+    development: {
+      provider: function() {
+        return new HDWalletProvider(
+          ganacheGuiMnemonic,
+          "http://127.0.0.1:7545/",
+          0,
+          50
+        );
+      },
+      // host: "127.0.0.1",
+      // port: 7545,
+      network_id: "*", //5777
+      gas: 6721975,
+    },
     rinkeby: {
       provider: () =>
         new HDWalletProvider(

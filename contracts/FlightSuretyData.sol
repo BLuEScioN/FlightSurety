@@ -15,11 +15,13 @@ contract FlightSuretyData {
     bool private operational = true; // Blocks all state changes throughout the contract if false
 
     // AIRLINES
-    mapping(address => Airline) private airlines;
-    uint256 numAirlines = 0;
-    mapping(address => uint8) private authorizedAirlines;
+    mapping(address => Airline) public airlines; // private
+    uint256 public numAirlines = 0;
+    address[] public airlineAddresses;
+
+    mapping(address => bool) private authorizedAirlines; // isAuthorizedAirline
     uint256 public numAuthorizedAirlines = 0;
-    address[] public authorizedAirlinesArray;
+    address[] public authorizedAirlinesArray; // authorizedAirlineAddresses
     mapping(address => mapping(address => uint8)) public airlineVotes; // registered airline to unregistered airline to yes or not vote
 
     struct Airline {
@@ -95,12 +97,18 @@ contract FlightSuretyData {
         });
         emit AirlineRegistered(contractOwner, name);
         numAirlines = 1;
+        airlineAddresses.push(contractOwner);
 
         // authorizeAirline(contractOwner); // cannot call because this has a modifier that requires the caller to be an authorized airline already
-        authorizedAirlines[contractOwner] = 1;
+        // authorizedAirlines[address(this)] = true;
+        authorizedAirlines[contractOwner] = true;
         authorizedAirlinesArray.push(contractOwner);
-        // authorizedAirlinesArray[numAuthorizedAirlines] = contractOwner; // delete
         numAuthorizedAirlines = 1;
+        // if (address(this) != contractOwner) {
+        //     authorizedAirlinesArray.push(address(this));
+        //     numAuthorizedAirlines++;
+        // }
+        // authorizedAirlinesArray[numAuthorizedAirlines] = contractOwner; // delete
     }
 
     /********************************************************************************************/
@@ -133,7 +141,7 @@ contract FlightSuretyData {
      */
     modifier requireAuthorizedAirline() {
         require(
-            authorizedAirlines[msg.sender] == 1,
+            authorizedAirlines[msg.sender] == true,
             "Caller is not an authorized airline."
         );
         _;
@@ -224,7 +232,7 @@ contract FlightSuretyData {
         requireIsOperational
         requireAuthorizedAirline
     {
-        authorizedAirlines[airline] == 1;
+        authorizedAirlines[airline] = true;
         authorizedAirlinesArray.push(airline);
         // authorizedAirlinesArray[numAuthorizedAirlines] = airline; //delete
         numAuthorizedAirlines += 1;
@@ -295,6 +303,14 @@ contract FlightSuretyData {
         return flights[flight].isRegistered;
     }
 
+    function getVotes(address airline)
+        public
+        requireIsOperational
+        returns (uint256)
+    {
+        return airlines[airline].votes;
+    }
+
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
@@ -312,15 +328,15 @@ contract FlightSuretyData {
     function registerAirline(address airline, string calldata name)
         external
         requireIsOperational
-        requireAuthorizedAirline
         returns (
+            // requireAuthorizedAirline
             bool success,
             bool isRegistered,
             uint256 votes
         )
     {
-        require(!doesAirlineExist(airline), "The airline already exists.");
-        require(!isAirlineRegistered(airline), "Airline is already registered");
+        require(!doesAirlineExist(airline), "The airline already exists."); // turn into modifier
+        // require(!isAirlineRegistered(airline), "Airline is already registered"); // superfluous
 
         isRegistered = false;
         if (numAirlines < MULTIPARTY_MIN_AIRLINES) {
@@ -345,15 +361,17 @@ contract FlightSuretyData {
             });
             emit AirlineInRegistrationQueue(airline, name);
         }
-        uint256 votes = vote(airline);
+        if (!isAirlineRegistered(airline)) vote(airline);
+        uint256 votes = getVotes(airline);
         numAirlines++;
+        airlineAddresses.push(airline);
         return (true, isRegistered, votes);
     }
 
     function vote(address airline)
         public
         requireIsOperational
-        requireAuthorizedAirline
+        // requireAuthorizedAirline
         requireVote(airline)
         returns (uint256)
     {
@@ -370,12 +388,12 @@ contract FlightSuretyData {
             numAirlines >= MULTIPARTY_MIN_AIRLINES &&
             airlines[airline].votes > uint256(MULTIPARTY_MIN_AIRLINES).div(2)
         ) {
-            airlines[airline].isRegistered = true; // make a function call?
+            airlines[airline].isRegistered = true;
             emit AirlineRegistered(airline, airlines[airline].name);
         }
 
         if (doesAirlineMeetAuthorizationRequirements(airline))
-            authorizedAirlines[airline] == 1;
+            authorizedAirlines[airline] == true;
 
         return airlines[airline].votes;
     }
