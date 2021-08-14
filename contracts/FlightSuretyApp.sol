@@ -167,22 +167,20 @@ contract FlightSuretyApp {
      *
      */
 
-    function buyFlightInsurance(string calldata flight)
+    function buyFlightInsurance(string calldata flightId)
         external
         payable
         requireIsOperational
         requireEOA
         requirePayment
-        returns (
-            uint256,
-            address,
-            uint256
-        )
+    // returns (
+    //     uint256,
+    //     address,
+    //     uint256
+    // )
     {
-        // (bool success) = address(flightSuretyData).call{value: msg.value}(abi.encodeWithSignature("buyFlightInsurance(string, uint256)", flight, payment));
-
         address(flightSuretyData).transfer(msg.value);
-        flightSuretyData.buyFlightInsurance(flight, msg.value, msg.sender);
+        flightSuretyData.buyFlightInsurance(flightId, msg.value, msg.sender);
     }
 
     /**
@@ -211,40 +209,6 @@ contract FlightSuretyApp {
     /********************************************************************************************/
     //                                    ORACLE FUNCTIONS
     /********************************************************************************************/
-
-    // Generate a request for oracles to fetch flight information
-    function fetchFlightStatus(
-        address airline,
-        string calldata flight,
-        uint256 timestamp
-    ) external {
-        uint8 index = getRandomIndex(msg.sender);
-
-        // Generate a unique key for storing the request
-        bytes32 key = keccak256(
-            abi.encodePacked(index, airline, flight, timestamp)
-        );
-        oracleResponses[key] = ResponseInfo({
-            requester: msg.sender,
-            isOpen: true
-        });
-
-        emit OracleRequest(index, airline, flight, timestamp);
-    }
-
-    /**
-     * @dev Called after oracle has updated flight status
-     *
-     */
-
-    function processFlightStatus(
-        address airline,
-        string memory flight,
-        uint256 timestamp,
-        uint8 statusCode
-    ) internal requireIsOperational {
-        flightSuretyData.processFlightStatus(flight, timestamp, statusCode);
-    }
 
     // region ORACLE MANAGEMENT
 
@@ -313,13 +277,65 @@ contract FlightSuretyApp {
         oracles[msg.sender] = Oracle({isRegistered: true, indexes: indexes});
     }
 
-    function getMyIndexes() external view returns (uint8[3] memory) {
-        require(
-            oracles[msg.sender].isRegistered,
-            "Not registered as an oracle"
+    // Returns array of three non-duplicating integers from 0-9
+    function generateIndexes(address account)
+        internal
+        returns (uint8[3] memory)
+    {
+        uint8[3] memory indexes;
+        indexes[0] = getRandomIndex(account);
+
+        indexes[1] = indexes[0];
+        while (indexes[1] == indexes[0]) {
+            indexes[1] = getRandomIndex(account);
+        }
+
+        indexes[2] = indexes[1];
+        while ((indexes[2] == indexes[0]) || (indexes[2] == indexes[1])) {
+            indexes[2] = getRandomIndex(account);
+        }
+
+        return indexes;
+    }
+
+    // Returns array of three non-duplicating integers from 0-9
+    function getRandomIndex(address account) internal returns (uint8) {
+        uint8 maxValue = 10;
+
+        // Pseudo random number...the incrementing nonce adds variation
+        uint8 random = uint8(
+            uint256(
+                keccak256(
+                    abi.encodePacked(blockhash(block.number - nonce++), account)
+                )
+            ) % maxValue
         );
 
-        return oracles[msg.sender].indexes;
+        if (nonce > 250) {
+            nonce = 0; // Can only fetch blockhashes for last 256 blocks so we adapt
+        }
+
+        return random;
+    }
+
+    // Generate a request for oracles to fetch flight information
+    function fetchFlightStatus(
+        address airline,
+        string calldata flight,
+        uint256 timestamp
+    ) external {
+        uint8 index = getRandomIndex(msg.sender);
+
+        // Generate a unique key for storing the request
+        bytes32 key = keccak256(
+            abi.encodePacked(index, airline, flight, timestamp)
+        );
+        oracleResponses[key] = ResponseInfo({
+            requester: msg.sender,
+            isOpen: true
+        });
+
+        emit OracleRequest(index, airline, flight, timestamp);
     }
 
     // Called by oracle when a response is available to an outstanding request
@@ -360,52 +376,32 @@ contract FlightSuretyApp {
         }
     }
 
+    /**
+     * @dev Called after oracle (server) has updated flight status
+     */
+    function processFlightStatus(
+        address airline,
+        string memory flight,
+        uint256 timestamp,
+        uint8 statusCode
+    ) internal requireIsOperational {
+        flightSuretyData.processFlightStatus(flight, timestamp, statusCode);
+    }
+
+    function getMyIndexes() external view returns (uint8[3] memory) {
+        require(
+            oracles[msg.sender].isRegistered,
+            "Not registered as an oracle"
+        );
+
+        return oracles[msg.sender].indexes;
+    }
+
     function getFlightKey(
         address airline,
         string memory flight,
         uint256 timestamp
     ) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(airline, flight, timestamp));
-    }
-
-    // Returns array of three non-duplicating integers from 0-9
-    function generateIndexes(address account)
-        internal
-        returns (uint8[3] memory)
-    {
-        uint8[3] memory indexes;
-        indexes[0] = getRandomIndex(account);
-
-        indexes[1] = indexes[0];
-        while (indexes[1] == indexes[0]) {
-            indexes[1] = getRandomIndex(account);
-        }
-
-        indexes[2] = indexes[1];
-        while ((indexes[2] == indexes[0]) || (indexes[2] == indexes[1])) {
-            indexes[2] = getRandomIndex(account);
-        }
-
-        return indexes;
-    }
-
-    // Returns array of three non-duplicating integers from 0-9
-    function getRandomIndex(address account) internal returns (uint8) {
-        uint8 maxValue = 10;
-
-        // Pseudo random number...the incrementing nonce adds variation
-        uint8 random = uint8(
-            uint256(
-                keccak256(
-                    abi.encodePacked(blockhash(block.number - nonce++), account)
-                )
-            ) % maxValue
-        );
-
-        if (nonce > 250) {
-            nonce = 0; // Can only fetch blockhashes for last 256 blocks so we adapt
-        }
-
-        return random;
     }
 }

@@ -34,7 +34,9 @@ contract FlightSuretyData {
     }
 
     // FLIGHTS
-    mapping(string => Flight) private flights;
+    mapping(string => Flight) public flights;
+    uint256 public numFlights = 0;
+    string[] public flightNameArray;
     struct Flight {
         string airline;
         string flight;
@@ -46,8 +48,9 @@ contract FlightSuretyData {
     }
 
     // PASSENGERS
-    mapping(address => Passenger) private passengers;
-    address[] public passengerAccounts;
+    mapping(address => Passenger) public passengers;
+    address[] public passengerAddresses;
+    uint256 public numPassengers = 0;
     struct Passenger {
         address account;
         mapping(string => uint256) flightsPurchased;
@@ -432,7 +435,7 @@ contract FlightSuretyData {
     )
         external
         requireIsOperational
-        requireAuthorizedAirline
+        // requireAuthorizedAirline
         requireValidDepartureTime(departureTime)
     {
         // bytes32 key = getFlight(msg.sender, flight, timestamp);
@@ -447,6 +450,9 @@ contract FlightSuretyData {
             isRegistered: true,
             exists: true
         });
+
+        flightNameArray.push(flight);
+        numFlights++;
     }
 
     // function getFlightKey
@@ -472,9 +478,9 @@ contract FlightSuretyData {
      */
 
     function buyFlightInsurance(
-        string calldata flight,
+        string calldata flightId,
         uint256 payment,
-        address payable passenger
+        address payable passengerAddress
     )
         external
         payable
@@ -487,37 +493,40 @@ contract FlightSuretyData {
         if (payment > INSURANCE_PRICE_LIMIT) {
             insurancePurchased = INSURANCE_PRICE_LIMIT;
             refund = payment.sub(INSURANCE_PRICE_LIMIT);
-            passenger.transfer(refund);
+            passengerAddress.transfer(refund);
         }
 
-        if (!passengers[passenger].exists) {
-            passengers[passenger] = Passenger({
-                account: passenger,
+        if (!passengers[passengerAddress].exists) {
+            passengers[passengerAddress] = Passenger({
+                account: passengerAddress,
                 payout: 0,
                 exists: true
             });
-            passengerAccounts.push(passenger);
+            passengerAddresses.push(passengerAddress);
+            numPassengers++;
         }
 
-        passengers[passenger].flightsPurchased[flight] = insurancePurchased; // record insurance paid for flight
+        passengers[passengerAddress]
+            .flightsPurchased[flightId] = insurancePurchased; // record insurance paid for flight
     }
 
     /**
      *  @dev Credits payouts to insurees
      */
     function creditInsurees(string memory flight) public requireIsOperational {
-        for (uint256 i = 0; i < passengerAccounts.length; i++) {
+        for (uint256 i = 0; i < passengerAddresses.length; i++) {
             if (
-                passengers[passengerAccounts[i]].flightsPurchased[flight] != 0
+                passengers[passengerAddresses[i]].flightsPurchased[flight] != 0
             ) {
-                uint256 currentPayout = passengers[passengerAccounts[i]].payout;
+                uint256 currentPayout = passengers[passengerAddresses[i]]
+                    .payout;
 
 
                     uint256 flightInsurancePurchased
-                 = passengers[passengerAccounts[i]].flightsPurchased[flight];
-                delete passengers[passengerAccounts[i]]
+                 = passengers[passengerAddresses[i]].flightsPurchased[flight];
+                delete passengers[passengerAddresses[i]]
                     .flightsPurchased[flight];
-                passengers[passengerAccounts[i]].payout = currentPayout.add(
+                passengers[passengerAddresses[i]].payout = currentPayout.add(
                     (
                         flightInsurancePurchased.mul(
                             (flightInsurancePurchased.div(2))

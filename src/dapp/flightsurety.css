@@ -84,6 +84,7 @@ td {
 /* registrations */
 .entities {
   margin-left: 40px;
+  height: fit-content;
 }
 
 .console-log-buttons {

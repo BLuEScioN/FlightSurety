@@ -214,24 +214,8 @@ export default class Contract {
   /********************************************************************************************/
 
   async logAirlines() {
-    const airlineAddresses = [];
-    const airlines = [];
-    const numAirlines = await this.flightSuretyData.methods
-      .numAirlines()
-      .call({ from: this.owner });
-    for (let i = 0; i < numAirlines; i++) {
-      const airlineAddress = await this.flightSuretyData.methods
-        .airlineAddresses(i)
-        .call({ from: this.owner });
-      airlineAddresses.push(airlineAddress);
-    }
-    for (let i = 0; i < numAirlines; i++) {
-      const airline = await this.flightSuretyData.methods
-        .airlines(airlineAddresses[i])
-        .call({ from: this.owner });
-      airlines.push(airline);
-    }
-    console.log("logAirlines", { airlineAddresses, airlines });
+    const airlines = await this.getAirlines();
+    console.log("logAirlines", { airlines });
   }
 
   async logAuthorizedAirlines() {
@@ -274,6 +258,48 @@ export default class Contract {
       };
     }
     console.log("logVotes", { votes: airlineToVotes });
+  }
+
+  async logFlights() {
+    const flightNames = [];
+    const flights = [];
+    const numFlights = await this.flightSuretyData.methods
+      .numFlights()
+      .call({ from: this.owner });
+    for (let i = 0; i < numFlights; i++) {
+      const flightName = await this.flightSuretyData.methods
+        .flightNameArray(i)
+        .call({ from: this.owner });
+      flightNames.push(flightName);
+    }
+    for (let i = 0; i < numFlights; i++) {
+      const flight = await this.flightSuretyData.methods
+        .flights(flightNames[i])
+        .call({ from: this.owner });
+      flights.push(flight);
+    }
+    console.log("logFlights", { flightNames, flights });
+  }
+
+  async logPassengers() {
+    const passengerAddresses = [];
+    const passengers = [];
+    const numPassengers = await this.flightSuretyData.methods
+      .numPassengers()
+      .call({ from: this.owner });
+    for (let i = 0; i < numPassengers; i++) {
+      const flightName = await this.flightSuretyData.methods
+        .passengerAddresses(i)
+        .call({ from: this.owner });
+      passengerAddresses.push(flightName);
+    }
+    for (let i = 0; i < numPassengers; i++) {
+      const passenger = await this.flightSuretyData.methods
+        .passengers(passengerAddresses[i])
+        .call({ from: this.owner });
+      passengers.push(passenger);
+    }
+    console.log("logPassengers", { passengerAddresses, passengers });
   }
 
   /********************************************************************************************/
@@ -332,100 +358,91 @@ export default class Contract {
 
   // PROVIDED
   isOperational(callback) {
-    let self = this;
-    self.flightSuretyApp.methods
+    this.flightSuretyApp.methods
       .isOperational()
-      .call({ from: self.owner }, callback);
+      .call({ from: this.owner }, callback);
   }
 
   /********************************************************************************************/
   //                                     FLIGHT ACTIONS
   /********************************************************************************************/
 
-  async registerFlight(flight, destination, callback) {
-    let self = this;
-    let payload = {
-      flight,
-      destination,
-      timestamp: Math.floor(Date.now() / 1000),
-    };
-    await this.web3.eth.getAccounts((error, accounts) => {
-      self.accounts = accounts;
-    });
-    self.flightSuretyApp.methods
-      .registerFlight(payload.flight, payload.destination, payload.timestamp)
-      .send(
-        { from: self.accounts[0], gas: 5000000, gasPrice: 20000000 },
-        (error, result) => callback(error, payload)
-      );
+  async registerFlight(airline, flight, departureTime, price) {
+    // consider putting into object and destructuring here
+    this.flightSuretyApp.methods
+      .registerFlight(airline, flight, departureTime, price)
+      .send({ from: await this.getActiveAccount(), gas: Config.gas });
   }
 
   /********************************************************************************************/
   //                                     PASSENGER ACTIONS
   /********************************************************************************************/
 
-  async buy(flight, price, callback) {
-    let self = this;
-    let priceInWei = this.web3.utils.toWei(price.toString(), "ether");
-    let payload = {
-      flight: flight,
-      price: priceInWei,
-      passenger: self.accounts[0],
-    };
-    await this.web3.eth.getAccounts((error, accounts) => {
-      payload.passenger = accounts[0];
+  async buyFlightInsurance(flightId, payment) {
+    let priceInWei = this.web3.utils.toWei(payment.toString(), "ether");
+
+    this.flightSuretyApp.methods.buyFlightInsurance(flightId).send({
+      from: await this.getActiveAccount(),
+      value: priceInWei,
+      gas: Config.gas,
     });
-    self.flightSuretyData.methods.buy(flight).send(
-      {
-        from: payload.passenger,
-        value: priceInWei,
-        gas: 500000,
-        gasPrice: 1,
-      },
-      (error, result) => callback(error, payload)
-    );
   }
 
-  // async getCreditToPay(callback) {
-  //     let self = this;
-  //     await this.web3.eth.getAccounts((error, accounts) => {
-  //         self.accounts = accounts;
-  //     });
-  //     self.flightSuretyData.methods.
-  //         getCreditToPay().call(
-  //             { from: self.accounts[0] },
-  //             (error, result) => callback(error, result)
-  //         );
-  // }
-
-  async pay(callback) {
-    let self = this;
-    await this.web3.eth.getAccounts(
-      (error, accounts) => (self.accounts = accounts)
-    );
-    self.flightSuretyData.methods
-      .withdraw(self.accounts[0])
-      .send({ from: self.accounts[0] }, (error, result) =>
-        callback(error, result)
-      );
+  async withdrawFlightInsurancePayout() {
+    this.flightSuretyData.methods
+      .withdraw(await this.getActiveAccount())
+      .send({ from: await this.getActiveAccount(), gas: Config.gas });
   }
 
   /********************************************************************************************/
   //                                     ORACLE ACTIONS
   /********************************************************************************************/
 
-  fetchFlightStatus(flight, callback) {
-    let self = this;
-    let payload = {
-      airline: self.airlineAddresses[0],
-      flight: flight,
-      timestamp: Math.floor(Date.now() / 1000),
-    };
-    self.flightSuretyApp.methods
-      .fetchFlightStatus(payload.airline, payload.flight, payload.timestamp)
-      .send({ from: self.owner }, (error, result) => {
-        callback(error, payload);
-      });
+  async fetchFlightStatus(flightId) {
+    const flightInfo = await this.getFlightInfo(flightId);
+    const airlines = await this.getAirlines();
+    const airline = airlines.filter(
+      (airline) =>
+        airline.name.toLowerCase() === flightInfo.airline.toLowerCase()
+    )[0];
+    const airlineAddress = airline?.account;
+    console.log("fetchFlightStatus", {
+      flightInfo,
+      airlines,
+      airline,
+      airlineAddress,
+    });
+    await this.flightSuretyApp.methods
+      .fetchFlightStatus(airlineAddress, flightId, flightInfo.departureTime)
+      .send({ from: await this.getActiveAccount(), gas: Config.gas });
+  }
+
+  async getFlightInfo(flightId) {
+    const flightInfo = await this.flightSuretyData.methods
+      .flights(flightId)
+      .call({ from: this.owner });
+    return flightInfo;
+  }
+
+  async getAirlines() {
+    const airlineAddresses = [];
+    const airlines = [];
+    const numAirlines = await this.flightSuretyData.methods
+      .numAirlines()
+      .call({ from: this.owner });
+    for (let i = 0; i < numAirlines; i++) {
+      const airlineAddress = await this.flightSuretyData.methods
+        .airlineAddresses(i)
+        .call({ from: this.owner });
+      airlineAddresses.push(airlineAddress);
+    }
+    for (let i = 0; i < numAirlines; i++) {
+      const airline = await this.flightSuretyData.methods
+        .airlines(airlineAddresses[i])
+        .call({ from: this.owner });
+      airlines.push(airline);
+    }
+    return airlines;
   }
 
   viewFlightStatus(airline, flight, callback) {

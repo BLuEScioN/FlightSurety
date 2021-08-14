@@ -90,15 +90,16 @@ async function initializeOracles() {
       .call({ from: oracleAccounts[0] });
 
     for (let i = 0; i < oracleCount; i++) {
-      const oracle = oracleAccounts[i];
+      const oracleAddress = oracleAccounts[i];
       await flightSuretyAppContract.methods
         .registerOracle()
-        .send({ from: oracle, value: fee, gas: config.gas });
+        .send({ from: oracleAddress, value: fee, gas: config.gas });
       const indices = await flightSuretyAppContract.methods
         .getMyIndexes()
-        .call({ from: oracle });
+        .call({ from: oracleAddress });
+      oracles.push({ id: i, address: oracleAddress, indices });
       console.log(
-        `Oracle ${i} (${oracle}) registered with indices, ${indices}`
+        `Oracle ${i} (${oracleAddress}) registered with indices, ${indices}`
       );
     }
   } catch (err) {
@@ -147,29 +148,35 @@ flightSuretyAppContract.events.OracleRequest(
     console.log("Server.js, Oracle Request event detected", { event });
     const { index, flight, airline, timestamp } = event.returnValues;
     console.log(
-      `Requesting data from oracles registed to service index: ${index}`
+      `Requesting data from oracles registered to service index: ${index}`
     );
 
     for (let oracle of oracles) {
-      const account = oracle.account ?? "undefined";
-      const indices = oracle.indices ?? [];
+      const { id, address, indices } = oracle;
       if (indices.includes(index)) {
         const flightStatus = getRandomFlightStatus();
         console.log(
-          `oracle ${oracle.account} with indices ${indices} responding with flightStatus ${flightStatus}`
+          `oracle ${address} with indices ${indices} responding with flightStatus ${flightStatus}`
         );
-        submitOracleResponse(
-          account,
-          index,
-          airline,
-          flight,
-          timestamp,
-          statusCode
-        );
+        // submitOracleResponse(
+        //   address,
+        //   index,
+        //   airline,
+        //   flight,
+        //   timestamp,
+        //   statusCode
+        // );
       }
     }
   }
 );
+
+function getRandomFlightStatus() {
+  const number = Math.floor(Math.random() * (50 - 0 + 1) + 0);
+  const firstDigit = number % 10;
+  return number - firstDigit;
+  // return Math.floor(Math.random() * (50 - 0 + 1) + 0); // Formula for getting a random integer between two values, inclusive: Math.floor(Math.random() * (max - min + 1) + min)
+}
 
 function submitOracleResponse(
   oracle,
@@ -185,10 +192,6 @@ function submitOracleResponse(
       from: oracle,
       gas: config.gas,
     });
-}
-
-function getRandomFlightStatus() {
-  return Math.floor(Math.random() * (50 - 10 + 1) + 0); // Formula for getting a random integer between two values, inclusive: Math.floor(Math.random() * (max - min + 1) + min)
 }
 
 /********************************************************************************************/

@@ -48,6 +48,12 @@
         <button class="btn btn-primary" id="log-data-owner">
           Log Data Owner
         </button>
+        <button class="btn btn-primary" id="log-flights">
+          Log Flights
+        </button>
+        <button class="btn btn-primary" id="log-passengers">
+          Log Passengers
+        </button>
       </div>
 
       <div class="add-flex">
@@ -77,6 +83,7 @@
                 Register a 4th airline. Try to fund it. Try to register a
                 flight. Vote the airline into registration.
               </li>
+              <li style="color:red">Figure out how to decode logs</li>
             </ol>
 
             <div class="form-group top-20">
@@ -117,6 +124,9 @@
                 registered. Airline funds can only be sent from the airline
                 itself.
               </div>
+              <div>
+                VM Exception. Send Ether. Fix when you have internet
+              </div>
               <div class="input-group-prepend">
                 <div class="input-group-text">ETH</div>
               </div>
@@ -132,6 +142,11 @@
             </button>
 
             <h3>Vote</h3>
+            <div>
+              Still need to test. Give an airline the required votes. If it
+              isn't funded, fund and see if it gets authorized. Otherwise, the
+              last required vote should make the airline an authorized airline..
+            </div>
             <div class="form-row top-20">
               <div class="form-group col-md-6">
                 <label>Airline Address</label>
@@ -229,6 +244,10 @@
             <h2>Passengers actions</h2>
 
             <h3 class="top-20">Buy Flight Insurance</h3>
+            <div style="color: red">
+              I think the problem is again I am not sending ether cant test
+              checking credit, withdrawing credit until this is fixed
+            </div>
             <div class="form-row top-20">
               <div class="form-group col-md-6">
                 <label>Flight ID</label>
@@ -255,7 +274,7 @@
                 </div>
               </div>
             </div>
-            <button class="btn btn-primary" id="buy-insurance">
+            <button class="btn btn-primary" id="buy-flight-insurance">
               Buy insurance
             </button>
 
@@ -265,7 +284,7 @@
                 <div class="form-row">
                   <div class="form-group col-md-1.5">
                     <button class="btn btn-primary" id="check-credit">
-                      Check credit
+                      Check credit (see console)
                     </button>
                   </div>
 
@@ -285,6 +304,9 @@
                 <button class="btn btn-primary" id="claim-credit">
                   Withdraw
                 </button>
+                <div style="color: green">
+                  check passenger ether balance has increased
+                </div>
               </div>
             </div>
           </div>
@@ -297,21 +319,25 @@
           <div style="border: 1px solid white">
             <div class="top-20">
               <h2>Oracle Actions</h2>
+
               <h3>Fetch Flight Status</h3>
+
               <div class="form-row top-20">
                 <div class="form-group col-md-6">
                   <label>Flight ID</label>
                   <input
                     type="text"
                     class="form-control"
-                    id="insurance-flight-id"
+                    id="fetch-flight-status-flight-id"
                   />
                 </div>
               </div>
-              <button class="btn btn-primary" id="buy-insurance">
+
+              <button class="btn btn-primary" id="fetch-flight-status">
                 Fetch Flight Status
               </button>
-              <div id="flight-stauts"></div>
+
+              <div id="flight-status"></div>
             </div>
           </div>
         </div>

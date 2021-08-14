@@ -1,55 +1,7 @@
-// import DOM from './dom';
-// import Contract from './contract';
-// import './flightsurety.css';
-
-// (async() => {
-
-//     let result = null;
-
-//     let contract = new Contract('localhost', () => {
-
-//         // Read transaction
-//         contract.isOperational((error, result) => {
-//             console.log(error,result);
-//             display('Operational Status', 'Check if contract is operational', [ { label: 'Operational Status', error: error, value: result} ]);
-//         });
-
-//         // User-submitted transaction
-//         DOM.elid('submit-oracle').addEventListener('click', () => {
-//             let flight = DOM.elid('flight-number').value;
-//             // Write transaction
-//             contract.fetchFlightStatus(flight, (error, result) => {
-//                 display('Oracles', 'Trigger oracles', [ { label: 'Fetch Flight Status', error: error, value: result.flight + ' ' + result.timestamp} ]);
-//             });
-//         })
-
-//     });
-
-// })();
-
-// function display(title, description, results) {
-//     let displayDiv = DOM.elid("display-wrapper");
-//     let section = DOM.section();
-//     section.appendChild(DOM.h2(title));
-//     section.appendChild(DOM.h5(description));
-//     results.map((result) => {
-//         let row = section.appendChild(DOM.div({className:'row'}));
-//         row.appendChild(DOM.div({className: 'col-sm-4 field'}, result.label));
-//         row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, result.error ? String(result.error) : String(result.value)));
-//         section.appendChild(row);
-//     })
-//     displayDiv.append(section);
-// }
-
 import DOM from "./dom";
 import Contract from "./contract";
 import "./flightsurety.css";
 import moment, { unix } from "moment-timezone";
-
-// $(document).ready(function(){
-//     $('[data-toggle="tooltip"]').tooltip().mouseover();
-//     setTimeout(function(){ $('[data-toggle="tooltip"]').tooltip('hide'); }, 3000);
-// });
 
 (async () => {
   let contract = new Contract("localhost", () => {
@@ -71,6 +23,14 @@ import moment, { unix } from "moment-timezone";
 
     DOM.elid("log-data-owner").addEventListener("click", async () => {
       contract.logDataOwner();
+    });
+
+    DOM.elid("log-flights").addEventListener("click", async () => {
+      contract.logFlights();
+    });
+
+    DOM.elid("log-passengers").addEventListener("click", async () => {
+      contract.logPassengers();
     });
 
     /********************************************************************************************/
@@ -101,257 +61,91 @@ import moment, { unix } from "moment-timezone";
     /********************************************************************************************/
 
     // REGISTER FLIGHT
-    // DOM.elid("register-flight").addEventListener("click", async () => {
-    //   let flight = DOM.elid("new-flight-number").value;
-    //   let destination = DOM.elid("new-flight-destination").value;
-
-    //   // Write transaction
-    //   contract.registerFlight(flight, destination, (error, result) => {
-    //     display("", "Register new flight", [
-    //       {
-    //         label: "Info:",
-    //         error: error,
-    //         value:
-    //           "Flight code: " +
-    //           result.flight +
-    //           " Destination: " +
-    //           result.destination,
-    //       },
-    //     ]);
-    //     if (!error) {
-    //       flightDisplay(flight, destination, result.address, result.timestamp);
-    //     }
-    //   });
-    // });
-
     DOM.elid("register-flight-1").addEventListener("click", async () => {
-      let airline = "first airline";
-      let flightId = 1;
-      let departure = "seattle";
-      let arrival = "cincinnati";
-      let date = new Date(2021, 8, 1, 23);
-      let departureTime = moment.tz(date, "America/Los_Angeles").unix();
-      let price = 350;
-      console.log("Register Flight 1", {
-        airline,
-        flightId,
+      const airlineName = "first airline";
+      const flightId = 1;
+      const departure = "seattle";
+      const arrival = "cincinnati";
+      const flightName = `${departure} to ${arrival}`;
+      const date = new Date(2021, 8, 1, 23);
+      const departureTime = moment.tz(date, "America/Los_Angeles").unix();
+      const price = 350;
+      contract.registerFlight(
+        airlineName,
+        flightId.toString(),
         departureTime,
-        price,
-      });
-
-      // Write transaction
-      // contract.registerFlight(
-      //   airline,
-      //   flight,
-      //   depatureTime,
-      //   price,
-      //   (error, result) => {
-      //     display("", "Register new flight", [
-      //       {
-      //         label: "Info:",
-      //         error: error,
-      //         value:
-      //           "Flight code: " +
-      //           result.flight +
-      //           " Destination: " +
-      //           result.destination,
-      //       },
-      //     ]);
-      //     if (!error) {
-      //       flightDisplay(
-      //         flight,
-      //         destination,
-      //         result.address,
-      //         result.timestamp
-      //       );
-      //     }
-      //   }
-      // );
+        price
+      );
     });
 
     DOM.elid("register-flight-2").addEventListener("click", async () => {
-      let airline = "first airline";
-      let flightId = 2;
-      let depature = "seattle";
-      let arrival = "nyc";
-      let date = new Date(2021, 8, 1, 7, 50);
-      let departureTime = moment.tz(date, "America/Los_Angeles").unix();
-      console.log("Register Flight 2", {
-        airline,
-        flightId,
+      const airlineName = "first airline";
+      const flightId = 2;
+      const departure = "seattle";
+      const arrival = "nyc";
+      const flightName = `${departure} to ${arrival}`;
+      const date = new Date(2021, 8, 1, 7, 50);
+      const departureTime = moment.tz(date, "America/Los_Angeles").unix();
+      const price = 450;
+      contract.registerFlight(
+        airlineName,
+        flightId.toString(),
         departureTime,
-        price,
-      });
-      let price = 450;
-
-      // Write transaction
-      // contract.registerFlight(
-      //   airline,
-      //   flight,
-      //   depatureTime,
-      //   price,
-      //   (error, result) => {
-      //     display("", "Register new flight", [
-      //       {
-      //         label: "Info:",
-      //         error: error,
-      //         value:
-      //           "Flight code: " +
-      //           result.flight +
-      //           " Destination: " +
-      //           result.destination,
-      //       },
-      //     ]);
-      //     if (!error) {
-      //       flightDisplay(
-      //         flight,
-      //         destination,
-      //         result.address,
-      //         result.timestamp
-      //       );
-      //     }
-      //   }
-      // );
+        price
+      );
     });
 
     DOM.elid("register-flight-3").addEventListener("click", async () => {
-      let airline = "first airline";
-      let flightId = 3;
-      let depature = "seattle";
-      let arrival = "milan";
-      let date = new Date(2021, 8, 1, 23, 45);
-      let departureTime = moment.tz(date, "America/Los_Angeles").unix();
-      console.log("Register Flight 3", {
-        airline,
-        flightId,
+      const airlineName = "first airline";
+      const flightId = 3;
+      const departure = "seattle";
+      const arrival = "milan";
+      const flightName = `${departure} to ${arrival}`;
+      const date = new Date(2021, 8, 1, 23, 45);
+      const departureTime = moment.tz(date, "America/Los_Angeles").unix();
+      const price = 685;
+      contract.registerFlight(
+        airlineName,
+        flightId.toString(),
         departureTime,
-        price,
-      });
-      let price = 685;
-
-      // Write transaction
-      // contract.registerFlight(
-      //   airline,
-      //   flight,
-      //   depatureTime,
-      //   price,
-      //   (error, result) => {
-      //     display("", "Register new flight", [
-      //       {
-      //         label: "Info:",
-      //         error: error,
-      //         value:
-      //           "Flight code: " +
-      //           result.flight +
-      //           " Destination: " +
-      //           result.destination,
-      //       },
-      //     ]);
-      //     if (!error) {
-      //       flightDisplay(
-      //         flight,
-      //         destination,
-      //         result.address,
-      //         result.timestamp
-      //       );
-      //     }
-      //   }
-      // );
+        price
+      );
     });
 
     DOM.elid("register-flight-4").addEventListener("click", async () => {
-      let airline = "first airline";
-      let flightId = 4;
-      let depature = "cincinnati";
-      let arrival = "seattle";
-      let date = new Date(2021, 8, 1, 12);
-      let departureTime = moment.tz(date, "America/New_York").unix();
-      console.log("Register Flight 4", {
-        airline,
-        flightId,
+      const airlineName = "first airline";
+      const flightId = 4;
+      const departure = "cincinnati";
+      const arrival = "seattle";
+      const flightName = `${departure} to ${arrival}`;
+      const date = new Date(2021, 8, 1, 12);
+      const departureTime = moment.tz(date, "America/New_York").unix();
+      const price = 250;
+      contract.registerFlight(
+        airlineName,
+        flightId.toString(),
         departureTime,
-        price,
-      });
-      let price = 250;
-
-      // Write transaction
-      // contract.registerFlight(
-      //   airline,
-      //   flight,
-      //   depatureTime,
-      //   price,
-      //   (error, result) => {
-      //     display("", "Register new flight", [
-      //       {
-      //         label: "Info:",
-      //         error: error,
-      //         value:
-      //           "Flight code: " +
-      //           result.flight +
-      //           " Destination: " +
-      //           result.destination,
-      //       },
-      //     ]);
-      //     if (!error) {
-      //       flightDisplay(
-      //         flight,
-      //         destination,
-      //         result.address,
-      //         result.timestamp
-      //       );
-      //     }
-      //   }
-      // );
+        price
+      );
     });
 
     /********************************************************************************************/
     //                                     PASSENGER ACTIONS
     /********************************************************************************************/
 
-    // User-submitted transaction
-    DOM.elid("buy-insurance").addEventListener("click", () => {
-      let flight = DOM.elid("insurance-flight").value;
-      let price = DOM.elid("insurance-price").value;
-      // Write transaction
-      contract.buy(flight, price, (error, result) => {
-        display("", "Bought a new flight insurance", [
-          {
-            label: "Insurance info",
-            error: error,
-            value: `Flight: ${result.flight}. Paid: ${result.price} wei. Passenger: ${result.passenger}`,
-          },
-        ]);
-      });
+    // PASSENGER BUY INSURANCE
+    DOM.elid("buy-flight-insurance").addEventListener("click", () => {
+      let flightId = DOM.elid("insurance-flight-id").value;
+      let payment = DOM.elid("insurance-payment").value;
+      contract.buyFlightInsurance(flightId, payment);
     });
 
-    // User-submitted transaction
-    DOM.elid("check-credit").addEventListener("click", () => {
-      // Write transaction
-      contract.getCreditToPay((error, result) => {
-        if (error) {
-          console.log(error);
-          let creditDisplay = DOM.elid("credit-ammount");
-          creditDisplay.value = "Error happened while getting your credit";
-        } else {
-          let creditDisplay = DOM.elid("credit-ammount");
-          creditDisplay.value = result + " wei";
-        }
-      });
-    });
+    // PASSENGER CHECKS CREDIT
+    DOM.elid("check-credit").addEventListener("click", () => {});
 
-    // User-submitted transaction
+    // PASSENGER WITHDRAWS FLIGHT INSURANCE PAYOUT
     DOM.elid("claim-credit").addEventListener("click", () => {
-      // Write transaction
-      contract.pay((error, result) => {
-        if (error) {
-          console.log(error);
-          alert("Error! Could not withdraw the credit.");
-        } else {
-          let creditDisplay = DOM.elid("credit-ammount");
-          alert(`Successfully withdrawed ${creditDisplay.value} wei!`);
-          creditDisplay.value = "0 ethers";
-        }
-      });
+      contract.withdrawFlightInsurancePayout();
     });
 
     /********************************************************************************************/
@@ -373,39 +167,10 @@ import moment, { unix } from "moment-timezone";
     // });
 
     // FETCH FLIGHT STATUS
-    // DOM.elid("submit-oracle").addEventListener("click", async () => {
-    //   let flight = DOM.elid("flight-number").value;
-    //   let selectedAirlineAddress = DOM.elid("selected-airline-address").value;
-
-    //   // Write transaction
-    //   contract.fetchFlightStatus(
-    //     selectedAirlineAddress,
-    //     flight,
-    //     (error, result) => {
-    //       display("", "Trigger oracles", [
-    //         {
-    //           label: "Fetch Flight Status",
-    //           error: error,
-    //           value: result.flight + " " + getTimeFromTimestamp(result.timestamp),
-    //         },
-    //       ]);
-    //       let newTime = result.timestamp;
-    //       displaySpinner();
-    //       setTimeout(() => {
-    //         contract.viewFlightStatus(
-    //           selectedAirlineAddress,
-    //           flight,
-    //           (error, result) => {
-    //             if (!error) {
-    //               changeFlightStatus(flight, result, newTime);
-    //             }
-    //           }
-    //         );
-    //         hideSpinner();
-    //       }, 2000);
-    //     }
-    //   );
-    // });
+    DOM.elid("fetch-flight-status").addEventListener("click", async () => {
+      const flightId = DOM.elid("fetch-flight-status-flight-id").value;
+      contract.fetchFlightStatus(flightId);
+    });
 
     // ????
     // DOM.elid("flights-display").addEventListener("click", async (e) => {
