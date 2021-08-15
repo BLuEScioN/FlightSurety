@@ -45,6 +45,13 @@ import moment, { unix } from "moment-timezone";
       contract.logVotes();
     });
 
+    DOM.elid("log-doesSenderMeetAuthorizationRequirements").addEventListener(
+      "click",
+      async () => {
+        contract.logDoesSenderMeetAuthorizationRequirements();
+      }
+    );
+
     /********************************************************************************************/
     //                                     AIRLINE ACTIONS
     /********************************************************************************************/

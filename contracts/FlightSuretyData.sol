@@ -22,7 +22,7 @@ contract FlightSuretyData {
     uint256 public numAuthorizedAirlines = 0;
     address[] public authorizedAirlinesArray;
 
-    mapping(address => mapping(address => uint8)) public airlineVotes; // registered airline to unregistered airline to yes or not vote
+    mapping(address => mapping(address => bool)) public airlineVotes; // registered airline to unregistered airline to yes or not vote
 
     struct Airline {
         address account;
@@ -79,7 +79,11 @@ contract FlightSuretyData {
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
 
-    event AirlineRegistered(address airlineAddress, string name);
+    event AirlineRegistered(
+        address airlineAddress,
+        string name,
+        bool isRegistered
+    );
     event AirlineAuthorized(address airlineAddress, string name);
     event AirlineInRegistrationQueue(address airline, string name);
     event AirlineVote(address voter, address votee);
@@ -100,20 +104,15 @@ contract FlightSuretyData {
             votes: 0,
             exists: true
         });
-        emit AirlineRegistered(contractOwner, name);
+        emit AirlineRegistered(contractOwner, name, true);
         numAirlines = 1;
         airlineAddresses.push(contractOwner);
 
         // authorizeAirline(contractOwner); // cannot call because this has a modifier that requires the caller to be an authorized airline already
-        // authorizedAirlines[address(this)] = true;
         authorizedAirlines[contractOwner] = true;
         authorizedAirlinesArray.push(contractOwner);
         numAuthorizedAirlines = 1;
-        // if (address(this) != contractOwner) {
-        //     authorizedAirlinesArray.push(address(this));
-        //     numAuthorizedAirlines++;
-        // }
-        // authorizedAirlinesArray[numAuthorizedAirlines] = contractOwner; // delete
+        emit AirlineAuthorized(contractOwner, "");
     }
 
     /********************************************************************************************/
@@ -134,17 +133,20 @@ contract FlightSuretyData {
     // AIRLINE
 
     // Requires the airline to be registered and have an insurance fund of at least 10 ETH
-    modifier requireAuthorizedAirline() {
+    modifier requireAuthorizedAirline(address airlineAddress) {
         require(
-            authorizedAirlines[msg.sender] == true,
+            authorizedAirlines[airlineAddress] == true,
             "Caller is not an authorized airline."
         );
         _;
     }
 
-    modifier requireVoterHasntVotedForAirline(address airlineAddress) {
+    modifier requireVoterHasntVotedForAirline(
+        address votingAirlineAddress,
+        address airlineAddress
+    ) {
         require(
-            airlineVotes[msg.sender][airlineAddress] == 0,
+            airlineVotes[votingAirlineAddress][airlineAddress] == false,
             "The msg.sender has already voted to authorize the airline."
         );
         _;
@@ -192,19 +194,6 @@ contract FlightSuretyData {
         _;
     }
 
-    modifier requireAvailableCredit() {
-        require(
-            passengers[msg.sender].payout > 0,
-            "The account has not credit available"
-        );
-        _;
-    }
-
-    modifier requireRegisteredFlight(string memory flight) {
-        require(isFlightRegistered(flight), "Flight is not registered.");
-        _;
-    }
-
     modifier requireAirlineInsurance() {
         require(
             isAirlineInsured(msg.sender),
@@ -213,8 +202,30 @@ contract FlightSuretyData {
         _;
     }
 
+    // FLIGHT
+
+    modifier requireRegisteredFlight(string memory flight) {
+        require(isFlightRegistered(flight), "Flight is not registered.");
+        _;
+    }
+
     modifier requireValidDepartureTime(uint256 departureTime) {
         require(departureTime > now, "Departure time cannot be in the past.");
+        _;
+    }
+
+    modifier requireFlightIsNotAlreadyRegistered(string memory flightId) {
+        require(!flights[flightId].exists, "Flight Id already registered.");
+        _;
+    }
+
+    // PASSENGER
+
+    modifier requireAvailableCredit() {
+        require(
+            passengers[msg.sender].payout > 0,
+            "The account has not credit available"
+        );
         _;
     }
 
@@ -222,68 +233,44 @@ contract FlightSuretyData {
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
 
-    /**
-     * @dev Get operating status of contract
-     *
-     * @return A bool that is the current operating status
-     */
+    // ADMIN
 
     function isOperational() public view returns (bool) {
         return operational;
     }
 
-    /**
-     * @dev Sets contract operations on/off
-     *
-     * When operational mode is disabled, all write transactions except for this one will fail
-     */
-
     function setOperatingStatus(bool mode) external requireContractOwner {
         operational = mode;
     }
 
-    /**
-     * @dev Gives an airline authority to perform specific actions
-     */
+    // AIRLINE
 
-    function authorizeAirline(address airline)
-        public
+    /**
+     * @dev Gives an airline authority to register flights
+     */
+    function authorizeAirline(address sender, address airlineAddress)
+        internal
         requireIsOperational
-        requireAuthorizedAirline
     {
-        authorizedAirlines[airline] = true;
-        authorizedAirlinesArray.push(airline);
-        // authorizedAirlinesArray[numAuthorizedAirlines] = airline; //delete
+        authorizedAirlines[airlineAddress] = true;
+        authorizedAirlinesArray.push(airlineAddress);
         numAuthorizedAirlines += 1;
     }
 
     /**
-     * @dev Strips an airline of authority to perform specific actions
+     * @dev Strips an airline of the authority to register flights
      */
-
-    function deauthorizeAirline(address airline)
-        public
+    function deauthorizeAirline(address sender, address airlineAddress)
+        internal
         requireIsOperational
-        requireAuthorizedAirline
     {
-        delete authorizedAirlines[airline];
+        delete authorizedAirlines[airlineAddress];
         for (uint256 i = 0; i < authorizedAirlinesArray.length; i++) {
-            // delete
-            if (authorizedAirlinesArray[i] == airline)
+            if (authorizedAirlinesArray[i] == airlineAddress) {
                 delete authorizedAirlinesArray[i];
+                numAuthorizedAirlines--;
+            }
         }
-    }
-
-    function isAirlineInsured(address airline)
-        public
-        requireIsOperational
-        returns (bool)
-    {
-        return airlines[airline].insuranceMoney > 10;
-    }
-
-    function getAirlineVotes(address airline) public returns (uint256) {
-        return airlines[airline].votes;
     }
 
     function getVotes(address airline)
@@ -303,14 +290,6 @@ contract FlightSuretyData {
         else return false;
     }
 
-    function isAirlineRegistered(address airline)
-        public
-        requireIsOperational
-        returns (bool)
-    {
-        return airlines[airline].isRegistered;
-    }
-
     function doesAirlineMeetAuthorizationRequirements(address airlineAddress)
         internal
         requireIsOperational
@@ -321,6 +300,32 @@ contract FlightSuretyData {
             isAirlineInsured(airlineAddress)
         ) return true;
         else return false;
+    }
+
+    function doesSenderMeetAuthorizationRequirements()
+        internal
+        requireIsOperational
+        returns (bool)
+    {
+        if (isAirlineRegistered(msg.sender) && isAirlineInsured(msg.sender))
+            return true;
+        else return false;
+    }
+
+    function isAirlineRegistered(address airlineAddress)
+        public
+        requireIsOperational
+        returns (bool)
+    {
+        return airlines[airlineAddress].isRegistered;
+    }
+
+    function isAirlineInsured(address airlineAddress)
+        public
+        requireIsOperational
+        returns (bool)
+    {
+        return airlines[airlineAddress].insuranceMoney > 10; // 1000000000000000000 18 0s
     }
 
     function doesAirlineHaveEnoughVotes(address airlineAddress)
@@ -343,6 +348,8 @@ contract FlightSuretyData {
         return numAirlines >= MULTIPARTY_MIN_AIRLINES;
     }
 
+    // FLIGHT
+
     function isFlightRegistered(string memory flight)
         public
         requireIsOperational
@@ -362,72 +369,61 @@ contract FlightSuretyData {
     /**
      * @dev Add an airline to the registration queue
      */
-    function registerAirline(address airlineAddress, string calldata name)
+    function registerAirline(
+        address sender,
+        address airlineAddress,
+        string calldata name
+    )
         external
         requireIsOperational
         requireAirlineDoesNotExist(airlineAddress)
-        returns (
-            // requireAuthorizedAirline
-            bool success,
-            bool isRegistered,
-            uint256 votes
-        )
+        requireAuthorizedAirline(sender)
+        returns (bool success, bool isRegistered)
     {
-        isRegistered = false;
-        if (numAirlines < MULTIPARTY_MIN_AIRLINES) {
-            isRegistered = true;
-            airlines[airlineAddress] = Airline({
-                account: airlineAddress,
-                name: name,
-                isRegistered: isRegistered,
-                insuranceMoney: 0,
-                votes: 0,
-                exists: true
-            });
-            emit AirlineRegistered(airlineAddress, name);
-        } else {
-            airlines[airlineAddress] = Airline({
-                account: airlineAddress,
-                isRegistered: isRegistered,
-                name: name,
-                insuranceMoney: 0,
-                votes: 0,
-                exists: true
-            });
-            emit AirlineInRegistrationQueue(airlineAddress, name);
-        }
-        if (!isAirlineRegistered(airlineAddress)) vote(airlineAddress);
-        uint256 votes = getVotes(airlineAddress);
+        bool isRegistered = doesAirlineHaveEnoughVotes(airlineAddress)
+            ? true
+            : false;
+        airlines[airlineAddress] = Airline({
+            account: airlineAddress,
+            name: name,
+            isRegistered: isRegistered,
+            insuranceMoney: 0,
+            votes: 0,
+            exists: true
+        });
+
+        emit AirlineRegistered(airlineAddress, name, isRegistered);
         numAirlines++;
         airlineAddresses.push(airlineAddress);
-        return (true, isRegistered, votes);
+        return (true, isRegistered);
     }
 
-    function vote(address airlineAddress)
+    function vote(address votingAirlineAddress, address airlineAddress)
         public
         requireIsOperational
         requireAirlineExists(airlineAddress)
         requireAirlineIsNotRegistered(airlineAddress)
-        requireVoterHasntVotedForAirline(airlineAddress)
+        requireVoterHasntVotedForAirline(votingAirlineAddress, airlineAddress)
         returns (
             // requireAuthorizedAirline
             uint256
         )
     {
         airlines[airlineAddress].votes = airlines[airlineAddress].votes.add(1);
-        airlineVotes[msg.sender][airlineAddress] = 1;
-        emit AirlineVote(msg.sender, airlineAddress);
+        airlineVotes[votingAirlineAddress][airlineAddress] = true;
+        emit AirlineVote(votingAirlineAddress, airlineAddress);
 
         if (doesAirlineHaveEnoughVotes(airlineAddress)) {
             airlines[airlineAddress].isRegistered = true;
             emit AirlineRegistered(
                 airlineAddress,
-                airlines[airlineAddress].name
+                airlines[airlineAddress].name,
+                true
             );
         }
 
         if (doesAirlineMeetAuthorizationRequirements(airlineAddress)) {
-            authorizedAirlines[airlineAddress] = true;
+            authorizeAirline(votingAirlineAddress, airlineAddress);
             emit AirlineAuthorized(
                 airlineAddress,
                 airlines[airlineAddress].name
@@ -448,15 +444,13 @@ contract FlightSuretyData {
         requireAirlineExists(airlineAddress)
         requirePayment
     {
-        // require(airlines[airlineAddress].exists, "The airline does not exist.");
-
         uint256 currentInsuranceMoney = airlines[airlineAddress].insuranceMoney;
         airlines[airlineAddress].insuranceMoney = currentInsuranceMoney.add(
             msg.value
         );
 
         if (doesAirlineMeetAuthorizationRequirements(airlineAddress)) {
-            authorizedAirlines[airlineAddress] = true;
+            authorizeAirline(airlineAddress, airlineAddress);
             emit AirlineAuthorized(
                 airlineAddress,
                 airlines[airlineAddress].name
@@ -472,6 +466,7 @@ contract FlightSuretyData {
      * @dev Register a future flight for insuring.
      */
     function registerFlight(
+        address sender,
         string calldata airline,
         string calldata flight,
         uint256 departureTime,
@@ -479,11 +474,17 @@ contract FlightSuretyData {
     )
         external
         requireIsOperational
-        // requireAuthorizedAirline
+        requireAuthorizedAirline(sender)
         requireValidDepartureTime(departureTime)
+        requireFlightIsNotAlreadyRegistered(flight)
     {
-        // bytes32 key = getFlight(msg.sender, flight, timestamp);
-        require(!flights[flight].exists, "Flight already registered.");
+        // bytes32 key = getFlight(msg.sender, flight, timestamp); // use key instead of Id
+
+        // require(!flights[flight].exists, "Flight already registered.");
+
+        // TODO: Validate that the sender is registering a flight for itself because it shouldnt
+        // be registering a flight for another airline that is not authorized and insured
+        // require(sender != airlines[airlineAddress], 'Registering a flight for another airline is prohibited');
 
         flights[flight] = Flight({
             airline: airline,

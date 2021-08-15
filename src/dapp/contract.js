@@ -324,11 +324,18 @@ export default class Contract {
     console.log("logVote", { votes });
   }
 
+  async logDoesSenderMeetAuthorizationRequirements() {
+    const response = await this.flightSuretyData.methods
+      .doesSenderMeetAuthorizationRequirements()
+      .call({ from: await this.getActiveAccount() });
+    console.log("logDoesSenderMeetAuthorizationRequirements", { response });
+  }
+
   /********************************************************************************************/
   //                                     AIRLINE ACTIONS
   /********************************************************************************************/
 
-  async registerAirline(address, name, callback) {
+  async registerAirline(address, name) {
     // For quick manual testing. Uses predefined addresses and names for registering airlines
     if (address === "" || name === "") {
       if (
@@ -349,22 +356,18 @@ export default class Contract {
       }
     }
 
-    callback = callback
-      ? callback
-      : () => {
-          console.log(
-            `airline with address ${address} and name ${name} registered successfully`
-          );
-          this.airlineAddresses.push(address);
-        };
     await this.flightSuretyApp.methods
       .registerAirline(address, name)
-      .send({ from: this.owner, gas: Config.gas }, callback);
+      .send({ from: this.owner, gas: Config.gas });
   }
 
   async vote(airlineAddress) {
     this.flightSuretyApp.methods
-      .vote(airlineAddress)
+      .vote(
+        airlineAddress === ""
+          ? "0x822A2d8C03C7cD15960312006a9077e2435560B9"
+          : airlineAddress
+      )
       .send({ from: await this.getActiveAccount(), gas: Config.gas });
   }
 

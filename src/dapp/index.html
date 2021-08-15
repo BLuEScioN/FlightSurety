@@ -63,6 +63,12 @@
         <button class="btn btn-primary" id="log-votes">
           Log Votes
         </button>
+        <button
+          class="btn btn-primary"
+          id="log-doesSenderMeetAuthorizationRequirements"
+        >
+          Log Authorization Status
+        </button>
       </div>
 
       <div class="add-flex">
@@ -128,14 +134,6 @@
 
             <h3>Fund</h3>
             <div class="input-group mb-2">
-              <div>
-                An airline needs to have 10 Ether in funds in order to be
-                registered. Airline funds can only be sent from the airline
-                itself.
-              </div>
-              <div>
-                VM Exception. Send Ether. Fix when you have internet
-              </div>
               <div class="input-group-prepend">
                 <div class="input-group-text">ETH</div>
               </div>
@@ -151,11 +149,6 @@
             </button>
 
             <h3>Vote</h3>
-            <div>
-              Still need to test. Give an airline the required votes. If it
-              isn't funded, fund and see if it gets authorized. Otherwise, the
-              last required vote should make the airline an authorized airline..
-            </div>
             <div class="form-row top-20">
               <div class="form-group col-md-6">
                 <label>Airline Address</label>

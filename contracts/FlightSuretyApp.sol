@@ -74,15 +74,12 @@ contract FlightSuretyApp {
         return flightSuretyData.isOperational(); // Modify to call data contract's status
     }
 
-    // function setDataContract
-    //     (
-    //         address dataContract
-    //     )
-    //     external
-    //     requireContractOwner
-    // {
-    //     flightSuretyData = FlightSuretyData(dataContract);
-    // }
+    function setDataContract(address payable dataContract)
+        external
+        requireContractOwner
+    {
+        flightSuretyData = FlightSuretyData(dataContract);
+    }
 
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
@@ -96,26 +93,22 @@ contract FlightSuretyApp {
      * @dev Add an airline to the registration queue
      *
      */
-
     function registerAirline(address airline, string calldata name)
         external
         requireIsOperational
         requireValidAddress(airline)
-        returns (
-            bool success,
-            bool isRegistered,
-            uint256 votes
-        )
+        returns (bool success, bool isRegistered)
     {
-        (success, isRegistered, votes) = flightSuretyData.registerAirline(
+        (success, isRegistered) = flightSuretyData.registerAirline(
+            msg.sender,
             airline,
             name
         );
-        return (success, isRegistered, votes);
+        return (success, isRegistered);
     }
 
-    function vote(address airline) public requireIsOperational {
-        flightSuretyData.vote(airline);
+    function vote(address airlineAddress) public requireIsOperational {
+        flightSuretyData.vote(msg.sender, airlineAddress);
     }
 
     /**
@@ -143,7 +136,13 @@ contract FlightSuretyApp {
         uint256 departureTime,
         uint256 price
     ) external requireIsOperational {
-        flightSuretyData.registerFlight(airline, flight, departureTime, price);
+        flightSuretyData.registerFlight(
+            msg.sender,
+            airline,
+            flight,
+            departureTime,
+            price
+        );
     }
 
     /********************************************************************************************/
