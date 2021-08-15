@@ -12,6 +12,15 @@ const gancheAddressesExcludingContractOwner = [
   { address: "0x8848c6D645999b43c11fc5D7EE168E2144c80A99", name: "sixth" },
 ];
 
+const allAirlineAddresses = [
+  "0x9eB378a3413635D6da45E027451a8c8a96b191FC",
+  "0x03cf3b49148b6e34c241eea65a95e873f9c80573",
+  "0x8f4eF69757745e4038d74c9fdF50D942b40824AF",
+  "0xC1b4580d1b282563DedFBd518AC2FEB206bedEEd",
+  "0x822A2d8C03C7cD15960312006a9077e2435560B9",
+  "0x8848c6D645999b43c11fc5D7EE168E2144c80A99",
+];
+
 export default class Contract {
   constructor(network, callback) {
     this.config = Config[network];
@@ -158,34 +167,34 @@ export default class Contract {
       );
   }
 
-  subscribeToEvents() {
-    this.eventSubscription = this.web3.eth
-      .subscribe(
-        "logs",
-        {
-          address: [this.config.dataAddress],
-        },
-        (error, result) => {
-          if (error) console.error("FE, subscribeToEvents", error);
-          console.log("FE, subscribeToEvents", { result });
-        }
-      )
-      .on("data", (log) => {
-        const decodedLog = this.web3.eth.abi.decodeLog(
-          FlightSuretyData.abi,
-          log?.data,
-          log?.topics
-        );
-        console.log("FE, subscribeToEvents, on data", {
-          log,
-          decodedLog,
-          //   decoded: this.web3.eth.abi.decodeLog(),
-        });
-      })
-      .on("changed", (log) =>
-        console.log("FE, subscribeToEvents, on change", { log })
-      );
-  }
+  // subscribeToEvents() {
+  //   this.eventSubscription = this.web3.eth
+  //     .subscribe(
+  //       "logs",
+  //       {
+  //         address: [this.config.dataAddress],
+  //       },
+  //       (error, result) => {
+  //         if (error) console.error("FE, subscribeToEvents", error);
+  //         console.log("FE, subscribeToEvents", { result });
+  //       }
+  //     )
+  //     .on("data", (log) => {
+  //       const decodedLog = this.web3.eth.abi.decodeLog(
+  //         FlightSuretyData.abi,
+  //         log?.data,
+  //         log?.topics
+  //       );
+  //       console.log("FE, subscribeToEvents, on data", {
+  //         log,
+  //         decodedLog,
+  //         //   decoded: this.web3.eth.abi.decodeLog(),
+  //       });
+  //     })
+  //     .on("changed", (log) =>
+  //       console.log("FE, subscribeToEvents, on change", { log })
+  //     );
+  // }
 
   checkContractsAreOperational() {
     this.flightSuretyApp.methods
@@ -246,20 +255,6 @@ export default class Contract {
     console.log("logAppOwner", { contractOwner });
   }
 
-  async logVotes() {
-    const airlineToVotes = {};
-    for (let i = 0; i < this.airlineAddresses.length; i++) {
-      const airline = await this.flightSuretyData.methods
-        .airlines(this.airlineAddresses[i])
-        .call({ from: this.owner });
-      airlineToVotes[airline.name] = {
-        address: airline?.address,
-        votes: airline?.votes,
-      };
-    }
-    console.log("logVotes", { votes: airlineToVotes });
-  }
-
   async logFlights() {
     const flightNames = [];
     const flights = [];
@@ -300,6 +295,33 @@ export default class Contract {
       passengers.push(passenger);
     }
     console.log("logPassengers", { passengerAddresses, passengers });
+  }
+
+  async logAppBalance() {
+    const balance = await this.web3.eth.getBalance(this.config.appAddress);
+    console.log("logAppBalance", { balance });
+  }
+
+  async logDataBalance() {
+    const balance = await this.web3.eth.getBalance(this.config.dataAddress);
+    console.log("logDataBalance", { balance });
+  }
+
+  async logVotes() {
+    let votes = {};
+    for (let i = 0; i < allAirlineAddresses.length; i++) {
+      for (let j = 0; j < allAirlineAddresses.length; j++) {
+        const voter = allAirlineAddresses[i];
+        const votee = allAirlineAddresses[j];
+        if (i === j) continue;
+        const voteRecord = await this.flightSuretyData.methods
+          .airlineVotes(voter, votee)
+          .call({ from: this.owner });
+        if (!(voter in votes)) votes[voter] = {};
+        votes[voter][votee] = voteRecord;
+      }
+    }
+    console.log("logVote", { votes });
   }
 
   /********************************************************************************************/
@@ -452,6 +474,8 @@ export default class Contract {
         callback(error, result);
       });
   }
+
+  async setFlightStatus(flightId, statusCode) {}
 
   /********************************************************************************************/
   //                                     UTILITY FUNCTIONS

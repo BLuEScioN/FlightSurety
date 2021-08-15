@@ -33,6 +33,18 @@ import moment, { unix } from "moment-timezone";
       contract.logPassengers();
     });
 
+    DOM.elid("log-app-balance").addEventListener("click", async () => {
+      contract.logAppBalance();
+    });
+
+    DOM.elid("log-data-balance").addEventListener("click", async () => {
+      contract.logDataBalance();
+    });
+
+    DOM.elid("log-votes").addEventListener("click", async () => {
+      contract.logVotes();
+    });
+
     /********************************************************************************************/
     //                                     AIRLINE ACTIONS
     /********************************************************************************************/

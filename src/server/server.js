@@ -63,7 +63,7 @@ let flightSuretyDataContract = new web3.eth.Contract(
 /********************************************************************************************/
 
 let oracles = [];
-const oracleCount = 10;
+const oracleCount = 20;
 
 let STATUS_CODE_UNKNOWN = 0;
 let STATUS_CODE_ON_TIME = 10;
@@ -158,14 +158,14 @@ flightSuretyAppContract.events.OracleRequest(
         console.log(
           `oracle ${address} with indices ${indices} responding with flightStatus ${flightStatus}`
         );
-        // submitOracleResponse(
-        //   address,
-        //   index,
-        //   airline,
-        //   flight,
-        //   timestamp,
-        //   statusCode
-        // );
+        submitOracleResponse(
+          address,
+          index,
+          airline,
+          flight,
+          timestamp,
+          statusCode
+        );
       }
     }
   }
@@ -179,17 +179,17 @@ function getRandomFlightStatus() {
 }
 
 function submitOracleResponse(
-  oracle,
+  oracleAddress,
   index,
   airline,
-  flight,
+  flightId,
   timestamp,
   statusCode
 ) {
   flightSuretyAppContract.methods
-    .submitOracleResponse(index, airline, flight, timestamp, statusCode)
+    .submitOracleResponse(index, airline, flightId, timestamp, statusCode)
     .send({
-      from: oracle,
+      from: oracleAddress,
       gas: config.gas,
     });
 }

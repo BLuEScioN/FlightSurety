@@ -10,18 +10,18 @@ contract FlightSuretyData {
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
 
-    address public contractOwner; // Account used to deploy contract
-
-    bool private operational = true; // Blocks all state changes throughout the contract if false
+    address public contractOwner;
+    bool private operational = true;
 
     // AIRLINES
-    mapping(address => Airline) public airlines; // private
+    mapping(address => Airline) public airlines;
     uint256 public numAirlines = 0;
     address[] public airlineAddresses;
 
-    mapping(address => bool) private authorizedAirlines; // isAuthorizedAirline
+    mapping(address => bool) private authorizedAirlines;
     uint256 public numAuthorizedAirlines = 0;
-    address[] public authorizedAirlinesArray; // authorizedAirlineAddresses
+    address[] public authorizedAirlinesArray;
+
     mapping(address => mapping(address => uint8)) public airlineVotes; // registered airline to unregistered airline to yes or not vote
 
     struct Airline {
@@ -62,7 +62,8 @@ contract FlightSuretyData {
     uint256 public constant INSURANCE_PRICE_LIMIT = 1 ether;
     uint256 public constant MIN_ANTE = 10 ether;
     uint8 private constant MULTIPARTY_MIN_AIRLINES = 4;
-    // Flight status codees
+
+    // FLIGHT STATUS CODES
     uint8 private constant STATUS_CODE_UNKNOWN = 0;
     uint8 private constant STATUS_CODE_ON_TIME = 10;
     uint8 private constant STATUS_CODE_LATE_AIRLINE = 20;
@@ -78,7 +79,8 @@ contract FlightSuretyData {
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
 
-    event AirlineRegistered(address airline, string name);
+    event AirlineRegistered(address airlineAddress, string name);
+    event AirlineAuthorized(address airlineAddress, string name);
     event AirlineInRegistrationQueue(address airline, string name);
     event AirlineVote(address voter, address votee);
 
@@ -118,30 +120,20 @@ contract FlightSuretyData {
     /*                                       FUNCTION MODIFIERS                                 */
     /********************************************************************************************/
 
-    // Modifiers help avoid duplication of code. They are typically used to validate something
-    // before a function is allowed to be executed.
-
-    /**
-     * @dev Modifier that requires the "operational" boolean variable to be "true"
-     *      This is used on all state changing functions to pause the contract in
-     *      the event there is an issue that needs to be fixed
-     */
+    // ADMIN
     modifier requireIsOperational() {
         require(operational, "Contract is currently not operational");
-        _; // All modifiers require an "_" which indicates where the function body will be added
+        _;
     }
 
-    /**
-     * @dev Modifier that requires the "ContractOwner" account to be the function caller
-     */
     modifier requireContractOwner() {
         require(msg.sender == contractOwner, "Caller is not contract owner");
         _;
     }
 
-    /**
-     * @dev Modifier that requires the "ContractOwner" account to be the function caller
-     */
+    // AIRLINE
+
+    // Requires the airline to be registered and have an insurance fund of at least 10 ETH
     modifier requireAuthorizedAirline() {
         require(
             authorizedAirlines[msg.sender] == true,
@@ -150,16 +142,16 @@ contract FlightSuretyData {
         _;
     }
 
-    modifier requireVote(address airline) {
+    modifier requireVoterHasntVotedForAirline(address airlineAddress) {
         require(
-            airlineVotes[msg.sender][airline] == 0,
-            "The registered airline/msg.sender has already voted to authorize the airline."
+            airlineVotes[msg.sender][airlineAddress] == 0,
+            "The msg.sender has already voted to authorize the airline."
         );
         _;
     }
 
-    modifier requireEther() {
-        require(msg.value > 0, "This function requires Ether.");
+    modifier requirePayment() {
+        require(msg.value > 0, "This function requires an ether payment.");
         _;
     }
 
@@ -172,6 +164,30 @@ contract FlightSuretyData {
         require(
             passengers[msg.sender].exists == true,
             "The passenger does not exist."
+        );
+        _;
+    }
+
+    modifier requireAirlineExists(address airlineAddress) {
+        require(
+            airlines[airlineAddress].exists == true,
+            "The airline does not exist."
+        );
+        _;
+    }
+
+    modifier requireAirlineDoesNotExist(address airlineAddress) {
+        require(
+            airlines[airlineAddress].exists == false,
+            "The airline does not exist."
+        );
+        _;
+    }
+
+    modifier requireAirlineIsNotRegistered(address airlineAddress) {
+        require(
+            airlines[airlineAddress].isRegistered == false,
+            "The airline is already registered."
         );
         _;
     }
@@ -266,8 +282,15 @@ contract FlightSuretyData {
         return airlines[airline].insuranceMoney > 10;
     }
 
-    /** Returns the number of votes an airline has received */
     function getAirlineVotes(address airline) public returns (uint256) {
+        return airlines[airline].votes;
+    }
+
+    function getVotes(address airline)
+        public
+        requireIsOperational
+        returns (uint256)
+    {
         return airlines[airline].votes;
     }
 
@@ -288,14 +311,36 @@ contract FlightSuretyData {
         return airlines[airline].isRegistered;
     }
 
-    function doesAirlineMeetAuthorizationRequirements(address airline)
+    function doesAirlineMeetAuthorizationRequirements(address airlineAddress)
         internal
         requireIsOperational
         returns (bool)
     {
-        if (isAirlineRegistered(airline) && isAirlineInsured(airline))
-            return true;
+        if (
+            isAirlineRegistered(airlineAddress) &&
+            isAirlineInsured(airlineAddress)
+        ) return true;
         else return false;
+    }
+
+    function doesAirlineHaveEnoughVotes(address airlineAddress)
+        internal
+        requireIsOperational
+        returns (bool)
+    {
+        if (!isVotingRequiredForRegistration()) return true;
+        else {
+            uint256 voteThreshold = uint256(MULTIPARTY_MIN_AIRLINES).div(2);
+            return airlines[airlineAddress].votes > voteThreshold;
+        }
+    }
+
+    function isVotingRequiredForRegistration()
+        internal
+        requireIsOperational
+        returns (bool)
+    {
+        return numAirlines >= MULTIPARTY_MIN_AIRLINES;
     }
 
     function isFlightRegistered(string memory flight)
@@ -304,14 +349,6 @@ contract FlightSuretyData {
         returns (bool)
     {
         return flights[flight].isRegistered;
-    }
-
-    function getVotes(address airline)
-        public
-        requireIsOperational
-        returns (uint256)
-    {
-        return airlines[airline].votes;
     }
 
     /********************************************************************************************/
@@ -324,13 +361,11 @@ contract FlightSuretyData {
 
     /**
      * @dev Add an airline to the registration queue
-     *      Can only be called from FlightSuretyApp contract
-     *
      */
-
-    function registerAirline(address airline, string calldata name)
+    function registerAirline(address airlineAddress, string calldata name)
         external
         requireIsOperational
+        requireAirlineDoesNotExist(airlineAddress)
         returns (
             // requireAuthorizedAirline
             bool success,
@@ -338,95 +373,104 @@ contract FlightSuretyData {
             uint256 votes
         )
     {
-        require(!doesAirlineExist(airline), "The airline already exists."); // turn into modifier
-        // require(!isAirlineRegistered(airline), "Airline is already registered"); // superfluous
-
         isRegistered = false;
         if (numAirlines < MULTIPARTY_MIN_AIRLINES) {
             isRegistered = true;
-            airlines[airline] = Airline({
-                account: airline,
+            airlines[airlineAddress] = Airline({
+                account: airlineAddress,
                 name: name,
                 isRegistered: isRegistered,
                 insuranceMoney: 0,
                 votes: 0,
                 exists: true
             });
-            emit AirlineRegistered(airline, name);
+            emit AirlineRegistered(airlineAddress, name);
         } else {
-            airlines[airline] = Airline({
-                account: airline,
+            airlines[airlineAddress] = Airline({
+                account: airlineAddress,
                 isRegistered: isRegistered,
                 name: name,
                 insuranceMoney: 0,
                 votes: 0,
                 exists: true
             });
-            emit AirlineInRegistrationQueue(airline, name);
+            emit AirlineInRegistrationQueue(airlineAddress, name);
         }
-        if (!isAirlineRegistered(airline)) vote(airline);
-        uint256 votes = getVotes(airline);
+        if (!isAirlineRegistered(airlineAddress)) vote(airlineAddress);
+        uint256 votes = getVotes(airlineAddress);
         numAirlines++;
-        airlineAddresses.push(airline);
+        airlineAddresses.push(airlineAddress);
         return (true, isRegistered, votes);
     }
 
-    function vote(address airline)
+    function vote(address airlineAddress)
         public
         requireIsOperational
-        // requireAuthorizedAirline
-        requireVote(airline)
-        returns (uint256)
+        requireAirlineExists(airlineAddress)
+        requireAirlineIsNotRegistered(airlineAddress)
+        requireVoterHasntVotedForAirline(airlineAddress)
+        returns (
+            // requireAuthorizedAirline
+            uint256
+        )
     {
-        require(doesAirlineExist(airline), "Airline does not exist.");
-        require(
-            !isAirlineRegistered(airline),
-            "Cannot vote for an airline that has already been registered."
-        );
+        airlines[airlineAddress].votes = airlines[airlineAddress].votes.add(1);
+        airlineVotes[msg.sender][airlineAddress] = 1;
+        emit AirlineVote(msg.sender, airlineAddress);
 
-        airlines[airline].votes = airlines[airline].votes.add(1);
-        emit AirlineVote(msg.sender, airline);
-
-        if (
-            numAirlines >= MULTIPARTY_MIN_AIRLINES &&
-            airlines[airline].votes > uint256(MULTIPARTY_MIN_AIRLINES).div(2)
-        ) {
-            airlines[airline].isRegistered = true;
-            emit AirlineRegistered(airline, airlines[airline].name);
+        if (doesAirlineHaveEnoughVotes(airlineAddress)) {
+            airlines[airlineAddress].isRegistered = true;
+            emit AirlineRegistered(
+                airlineAddress,
+                airlines[airlineAddress].name
+            );
         }
 
-        if (doesAirlineMeetAuthorizationRequirements(airline))
-            authorizedAirlines[airline] == true;
+        if (doesAirlineMeetAuthorizationRequirements(airlineAddress)) {
+            authorizedAirlines[airlineAddress] = true;
+            emit AirlineAuthorized(
+                airlineAddress,
+                airlines[airlineAddress].name
+            );
+        }
 
-        return airlines[airline].votes;
+        return airlines[airlineAddress].votes;
     }
 
     /**
      * @dev Initial funding for the insurance. Unless there are too many delayed flights
      *      resulting in insurance payouts, the contract should be self-sustaining
-     *
      */
-
-    function fund(address airline, uint256 payment)
+    function fund(address airlineAddress)
         public
         payable
         requireIsOperational
-        requireEther
+        requireAirlineExists(airlineAddress)
+        requirePayment
     {
-        require(airlines[airline].exists, "The airline does not exist.");
+        // require(airlines[airlineAddress].exists, "The airline does not exist.");
 
-        uint256 currentInsuranceMoney = airlines[airline].insuranceMoney;
-        airlines[airline].insuranceMoney = currentInsuranceMoney.add(payment);
+        uint256 currentInsuranceMoney = airlines[airlineAddress].insuranceMoney;
+        airlines[airlineAddress].insuranceMoney = currentInsuranceMoney.add(
+            msg.value
+        );
+
+        if (doesAirlineMeetAuthorizationRequirements(airlineAddress)) {
+            authorizedAirlines[airlineAddress] = true;
+            emit AirlineAuthorized(
+                airlineAddress,
+                airlines[airlineAddress].name
+            );
+        }
     }
 
     /********************************************************************************************/
     //                                     FLIGHT FUNCTIONS
     /********************************************************************************************/
+
     /**
      * @dev Register a future flight for insuring.
-     *
      */
-
     function registerFlight(
         string calldata airline,
         string calldata flight,

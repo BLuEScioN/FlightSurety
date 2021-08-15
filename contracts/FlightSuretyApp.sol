@@ -25,26 +25,14 @@ contract FlightSuretyApp {
     /*                                       FUNCTION MODIFIERS                                 */
     /********************************************************************************************/
 
-    // Modifiers help avoid duplication of code. They are typically used to validate something
-    // before a function is allowed to be executed.
-
-    /**
-     * @dev Modifier that requires the "operational" boolean variable to be "true"
-     *      This is used on all state changing functions to pause the contract in
-     *      the event there is an issue that needs to be fixed
-     */
     modifier requireIsOperational() {
-        // Modify to call data contract's status
         require(
             flightSuretyData.isOperational(),
             "Contract is currently not operational"
         );
-        _; // All modifiers require an "_" which indicates where the function body will be added
+        _;
     }
 
-    /**
-     * @dev Modifier that requires the "ContractOwner" account to be the function caller
-     */
     modifier requireContractOwner() {
         require(msg.sender == contractOwner, "Caller is not contract owner");
         _;
@@ -137,8 +125,8 @@ contract FlightSuretyApp {
      */
     // TODO: pass original msg.sender through
     function fund() public payable requireIsOperational requirePayment {
-        address(flightSuretyData).transfer(msg.value); // combine with fund call?
-        flightSuretyData.fund(msg.sender, msg.value);
+        // address(flightSuretyData).transfer(msg.value); // combine with fund call?
+        flightSuretyData.fund.value(msg.value)(msg.sender);
     }
 
     /********************************************************************************************/
@@ -326,7 +314,6 @@ contract FlightSuretyApp {
     ) external {
         uint8 index = getRandomIndex(msg.sender);
 
-        // Generate a unique key for storing the request
         bytes32 key = keccak256(
             abi.encodePacked(index, airline, flight, timestamp)
         );
