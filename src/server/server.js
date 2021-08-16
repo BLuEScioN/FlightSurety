@@ -220,13 +220,7 @@ function submitOracleResponse(
   statusCode
 ) {
   flightSuretyAppContract.methods
-    .submitOracleResponse(
-      index,
-      airline,
-      flightId,
-      timestamp,
-      STATUS_CODE_LATE_AIRLINE
-    ) // TODO: change STATUS_CODE_LATE_AIRLINE back to statusCode
+    .submitOracleResponse(index, airline, flightId, timestamp, statusCode) // FIXME: change STATUS_CODE_LATE_AIRLINE back to statusCode
     .send({
       from: oracleAddress,
       gas: config.gas,

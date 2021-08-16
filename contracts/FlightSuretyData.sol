@@ -12,6 +12,7 @@ contract FlightSuretyData {
 
     address public contractOwner;
     bool private operational = true;
+    mapping(address => bool) private authorizedCallers;
 
     // AIRLINES
     mapping(address => Airline) public airlines;
@@ -142,6 +143,14 @@ contract FlightSuretyData {
         _;
     }
 
+    modifier isAuthorizedCaller() {
+        require(
+            authorizedCallers[msg.sender] == true,
+            "Address is not authorized to make calls on data contract"
+        );
+        _;
+    }
+
     // AIRLINE
 
     // Requires the airline to be registered and have an insurance fund of at least 10 ETH
@@ -248,6 +257,13 @@ contract FlightSuretyData {
 
     function setOperatingStatus(bool mode) external requireContractOwner {
         operational = mode;
+    }
+
+    function authorizeCaller(address addressToAuthorize)
+        external
+        requireContractOwner()
+    {
+        authorizedCallers[addressToAuthorize] = true;
     }
 
     // AIRLINE
