@@ -151,53 +151,30 @@ contract FlightSuretyApp {
 
     /**
      * @dev Buy insurance for a flight
-     *
      */
-
     function buyFlightInsurance(string calldata flightId)
         external
         payable
         requireIsOperational
         requireEOA
         requirePayment
-    // returns (
-    //     uint256,
-    //     address,
-    //     uint256
-    // )
     {
-        address(flightSuretyData).transfer(msg.value);
-        flightSuretyData.buyFlightInsurance(flightId, msg.value, msg.sender);
-    }
-
-    /**
-     *  @dev Credits payouts to insurees
-     */
-    function creditInsurees(string calldata flight)
-        external
-        requireIsOperational
-    {
-        flightSuretyData.creditInsurees(flight);
+        flightSuretyData.buyFlightInsurance.value(msg.value)(
+            flightId,
+            msg.sender
+        );
     }
 
     /**
      *  @dev Transfers eligible payout funds to insuree
-     *
      */
-    function withdraw()
-        external
-        requireIsOperational
-        requireContractOwner
-        requireEOA
-    {
-        flightSuretyData.withdraw();
+    function withdraw() external requireIsOperational requireEOA {
+        flightSuretyData.withdraw(msg.sender);
     }
 
     /********************************************************************************************/
     //                                    ORACLE FUNCTIONS
     /********************************************************************************************/
-
-    // region ORACLE MANAGEMENT
 
     // Incremented to add pseudo-randomness at various points
     uint8 private nonce = 0;
@@ -229,7 +206,7 @@ contract FlightSuretyApp {
     // Key = hash(index, flight, timestamp)
     mapping(bytes32 => ResponseInfo) private oracleResponses;
 
-    // Event fired each tim``e an oracle submits a response
+    // Event fired each time an oracle submits a response
     event FlightStatusInfo(
         address airline,
         string flight,
@@ -359,6 +336,7 @@ contract FlightSuretyApp {
 
             // Handle flight status as appropriate
             processFlightStatus(airline, flight, timestamp, statusCode);
+            oracleResponses[key].isOpen = false;
         }
     }
 

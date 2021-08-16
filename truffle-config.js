@@ -11,7 +11,7 @@ const testMetaMaskMnemonic = fs
   .toString()
   .trim();
 const ganacheGuiMnemonic =
-  "actor shadow tragic world note slender age save token fossil poet cable"; // ganche blockchain network
+  "balcony become anchor giant glad liquid pole eight total suspect lonely opera"; // ganche blockchain network
 const ganacheCliMnemonic =
   "lumber warfare budget length hunt initial main crew silly flower perfect benefit"; // ganche blockchain network
 

@@ -17,6 +17,7 @@ contract FlightSuretyData {
     mapping(address => Airline) public airlines;
     uint256 public numAirlines = 0;
     address[] public airlineAddresses;
+    uint256 airlineId = 1;
 
     mapping(address => bool) private authorizedAirlines;
     uint256 public numAuthorizedAirlines = 0;
@@ -25,7 +26,8 @@ contract FlightSuretyData {
     mapping(address => mapping(address => bool)) public airlineVotes; // registered airline to unregistered airline to yes or not vote
 
     struct Airline {
-        address account;
+        address airlineAddress;
+        uint256 id;
         string name;
         bool isRegistered;
         uint256 insuranceMoney;
@@ -51,10 +53,13 @@ contract FlightSuretyData {
     mapping(address => Passenger) public passengers;
     address[] public passengerAddresses;
     uint256 public numPassengers = 0;
+    mapping(address => mapping(string => uint256))
+        public passengerFlightInsurance; // passenger address => flightId to insurance purchased
+    mapping(address => string[]) public passengerFlightsPurchased;
+    mapping(address => uint256) public numFlightsPurchased;
     struct Passenger {
-        address account;
-        mapping(string => uint256) flightsPurchased;
-        uint256 payout;
+        address passengerAddress;
+        uint256 credit;
         bool exists;
     }
 
@@ -81,6 +86,7 @@ contract FlightSuretyData {
 
     event AirlineRegistered(
         address airlineAddress,
+        uint256 id,
         string name,
         bool isRegistered
     );
@@ -94,17 +100,23 @@ contract FlightSuretyData {
      */
     constructor() public {
         contractOwner = msg.sender;
-        string memory name = "First Airline";
+        string memory name = "first";
 
         airlines[contractOwner] = Airline({
-            account: contractOwner,
+            airlineAddress: contractOwner,
+            id: airlineId++,
             name: name,
             isRegistered: true,
             insuranceMoney: 0,
             votes: 0,
             exists: true
         });
-        emit AirlineRegistered(contractOwner, name, true);
+        emit AirlineRegistered(
+            contractOwner,
+            airlines[contractOwner].id,
+            name,
+            true
+        );
         numAirlines = 1;
         airlineAddresses.push(contractOwner);
 
@@ -112,7 +124,7 @@ contract FlightSuretyData {
         authorizedAirlines[contractOwner] = true;
         authorizedAirlinesArray.push(contractOwner);
         numAuthorizedAirlines = 1;
-        emit AirlineAuthorized(contractOwner, "");
+        emit AirlineAuthorized(contractOwner, "first");
     }
 
     /********************************************************************************************/
@@ -157,14 +169,9 @@ contract FlightSuretyData {
         _;
     }
 
-    modifier requireEOA() {
-        require(msg.sender == tx.origin, "Contracts not allowed.");
-        _;
-    }
-
-    modifier requirePassengerExists() {
+    modifier requirePassengerExists(address passenger) {
         require(
-            passengers[msg.sender].exists == true,
+            passengers[passenger].exists == true,
             "The passenger does not exist."
         );
         _;
@@ -221,10 +228,10 @@ contract FlightSuretyData {
 
     // PASSENGER
 
-    modifier requireAvailableCredit() {
+    modifier requireAvailableCredit(address passenger) {
         require(
-            passengers[msg.sender].payout > 0,
-            "The account has not credit available"
+            passengers[passenger].credit > 0,
+            "The passenger does not have credit available"
         );
         _;
     }
@@ -273,20 +280,20 @@ contract FlightSuretyData {
         }
     }
 
-    function getVotes(address airline)
+    function getVotes(address airlineAddress)
         public
         requireIsOperational
         returns (uint256)
     {
-        return airlines[airline].votes;
+        return airlines[airlineAddress].votes;
     }
 
-    function doesAirlineExist(address airline)
+    function doesAirlineExist(address airlineAddress)
         public
         requireIsOperational
         returns (bool)
     {
-        if (airlines[airline].exists == true) return true;
+        if (airlines[airlineAddress].exists == true) return true;
         else return false;
     }
 
@@ -384,7 +391,8 @@ contract FlightSuretyData {
             ? true
             : false;
         airlines[airlineAddress] = Airline({
-            account: airlineAddress,
+            airlineAddress: airlineAddress,
+            id: airlineId++,
             name: name,
             isRegistered: isRegistered,
             insuranceMoney: 0,
@@ -392,7 +400,12 @@ contract FlightSuretyData {
             exists: true
         });
 
-        emit AirlineRegistered(airlineAddress, name, isRegistered);
+        emit AirlineRegistered(
+            airlineAddress,
+            airlines[airlineAddress].id,
+            name,
+            isRegistered
+        );
         numAirlines++;
         airlineAddresses.push(airlineAddress);
         return (true, isRegistered);
@@ -404,10 +417,8 @@ contract FlightSuretyData {
         requireAirlineExists(airlineAddress)
         requireAirlineIsNotRegistered(airlineAddress)
         requireVoterHasntVotedForAirline(votingAirlineAddress, airlineAddress)
-        returns (
-            // requireAuthorizedAirline
-            uint256
-        )
+        requireAuthorizedAirline(votingAirlineAddress)
+        returns (uint256)
     {
         airlines[airlineAddress].votes = airlines[airlineAddress].votes.add(1);
         airlineVotes[votingAirlineAddress][airlineAddress] = true;
@@ -417,6 +428,7 @@ contract FlightSuretyData {
             airlines[airlineAddress].isRegistered = true;
             emit AirlineRegistered(
                 airlineAddress,
+                airlines[airlineAddress].id,
                 airlines[airlineAddress].name,
                 true
             );
@@ -524,7 +536,6 @@ contract FlightSuretyData {
 
     function buyFlightInsurance(
         string calldata flightId,
-        uint256 payment,
         address payable passengerAddress
     )
         external
@@ -532,79 +543,78 @@ contract FlightSuretyData {
         requireIsOperational
     // returns (uint256, address, uint256)
     {
-        uint256 insurancePurchased = payment;
+        uint256 insurancePurchased = msg.value;
         uint256 refund = 0;
 
-        if (payment > INSURANCE_PRICE_LIMIT) {
+        if (msg.value > INSURANCE_PRICE_LIMIT) {
             insurancePurchased = INSURANCE_PRICE_LIMIT;
-            refund = payment.sub(INSURANCE_PRICE_LIMIT);
+            refund = msg.value.sub(INSURANCE_PRICE_LIMIT);
             passengerAddress.transfer(refund);
         }
 
         if (!passengers[passengerAddress].exists) {
             passengers[passengerAddress] = Passenger({
-                account: passengerAddress,
-                payout: 0,
+                passengerAddress: passengerAddress,
+                credit: 0,
                 exists: true
             });
             passengerAddresses.push(passengerAddress);
             numPassengers++;
         }
 
-        passengers[passengerAddress]
-            .flightsPurchased[flightId] = insurancePurchased; // record insurance paid for flight
+        passengerFlightsPurchased[passengerAddress].push(flightId); // record flightId of purchased flight
+        numFlightsPurchased[passengerAddress]++;
+        passengerFlightInsurance[passengerAddress][flightId] = insurancePurchased; // record flight insurance purchased
     }
 
     /**
      *  @dev Credits payouts to insurees
      */
-    function creditInsurees(string memory flight) public requireIsOperational {
+    function creditPassengers(string memory flightId)
+        internal
+        requireIsOperational
+    {
         for (uint256 i = 0; i < passengerAddresses.length; i++) {
-            if (
-                passengers[passengerAddresses[i]].flightsPurchased[flight] != 0
-            ) {
-                uint256 currentPayout = passengers[passengerAddresses[i]]
-                    .payout;
+            address passengerAddress = passengerAddresses[i];
 
 
-                    uint256 flightInsurancePurchased
-                 = passengers[passengerAddresses[i]].flightsPurchased[flight];
-                delete passengers[passengerAddresses[i]]
-                    .flightsPurchased[flight];
-                passengers[passengerAddresses[i]].payout = currentPayout.add(
-                    (
-                        flightInsurancePurchased.mul(
-                            (flightInsurancePurchased.div(2))
-                        )
-                    )
+                uint256 flightInsurancePurchased
+             = passengerFlightInsurance[passengerAddress][flightId];
+
+            if (flightInsurancePurchased > 0) {
+                uint256 currentCredit = passengers[passengerAddress].credit;
+
+                passengerFlightInsurance[passengerAddress][flightId] = 0;
+
+                passengers[passengerAddress].credit = currentCredit.add(
+                    flightInsurancePurchased.mul(3).div(2)
                 );
             }
         }
 
-        // Check if any airlines have lost their authorized status because they had to payout from their insurance money and they have less than they are suppose to
+        // TODO: Check if any airlines have lost their authorized status because they had to payout from their insurance money and they have less than they are suppose to
     }
 
     /**
      *  @dev Transfers eligible payout funds to insuree
      *
      */
-    function withdraw()
+    function withdraw(address payable passenger)
         external
         requireIsOperational
-        requireEOA
-        requirePassengerExists
-        requireAvailableCredit
+        requirePassengerExists(passenger)
+        requireAvailableCredit(passenger)
     {
-        uint256 credit = passengers[msg.sender].payout;
+        uint256 credit = passengers[passenger].credit;
         uint256 currentBalance = address(this).balance;
 
         require(
-            currentBalance > credit,
+            currentBalance >= credit,
             "The contract does not have enough ether to pay the passenger."
         );
 
-        passengers[msg.sender].payout = 0;
-        msg.sender.transfer(credit);
+        passengers[passenger].credit = 0;
+        passenger.transfer(credit);
     }
 
     /********************************************************************************************/
@@ -612,14 +622,14 @@ contract FlightSuretyData {
     /********************************************************************************************/
 
     function processFlightStatus(
-        string calldata flight,
+        string calldata flightId,
         uint256 departureTime,
         uint8 statusCode
-    ) external requireIsOperational requireRegisteredFlight(flight) {
-        flights[flight].departureTime = departureTime;
-        flights[flight].statusCode = statusCode;
+    ) external requireIsOperational requireRegisteredFlight(flightId) {
+        // flights[flightId].departureTime = departureTime;
+        flights[flightId].statusCode = statusCode;
 
-        if (statusCode == STATUS_CODE_LATE_AIRLINE) creditInsurees(flight);
+        if (statusCode == STATUS_CODE_LATE_AIRLINE) creditPassengers(flightId);
     }
 
     // function updateFlightDepartureTime

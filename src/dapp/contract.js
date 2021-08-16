@@ -30,7 +30,6 @@ export default class Contract {
     this.accounts;
     this.activeAccount;
     this.owner;
-    this.airlineAddresses = [];
     this.airlines = [];
     this.flights = [];
     this.passengers = [];
@@ -101,29 +100,11 @@ export default class Contract {
 
   async initializeAccounts(callback) {
     const accounts = await this.web3.eth.getAccounts((error, accounts) => {
-      console.log("contract.js, initializeAccounts", { error, accounts });
+      // console.log("contract.js, initializeAccounts", { error, accounts });
       if (error) console.error(error);
 
       this.accounts = accounts;
       this.owner = accounts[0];
-
-      this.airlineAddresses.push(this.owner); // owner is contract owner of app and data contracts and becomes 1st airline
-
-      // console.log("FE, initializeAccounts", { owner: this.owner }); // delete
-
-      // let counter = 1;
-
-      // while (this.airlineAddresses.length < 5) {
-      //   this.airlineAddresses.push(accounts[counter++]);
-      // }
-      // console.log("FE, initializeAccounts", {
-      //   airlines: this.airlineAddresses,
-      // }); // delete
-
-      // while (this.passengers.length < 5) {
-      //   this.passengers.push(accounts[counter++]);
-      // }
-      // console.log("FE, initializeAccounts", { passengers: this.passengers }); // delete
     });
     console.log({ accounts });
   }
@@ -277,24 +258,10 @@ export default class Contract {
   }
 
   async logPassengers() {
-    const passengerAddresses = [];
-    const passengers = [];
-    const numPassengers = await this.flightSuretyData.methods
-      .numPassengers()
-      .call({ from: this.owner });
-    for (let i = 0; i < numPassengers; i++) {
-      const flightName = await this.flightSuretyData.methods
-        .passengerAddresses(i)
-        .call({ from: this.owner });
-      passengerAddresses.push(flightName);
-    }
-    for (let i = 0; i < numPassengers; i++) {
-      const passenger = await this.flightSuretyData.methods
-        .passengers(passengerAddresses[i])
-        .call({ from: this.owner });
-      passengers.push(passenger);
-    }
-    console.log("logPassengers", { passengerAddresses, passengers });
+    console.log("logPassengers", {
+      passengerAddresses: await this.getPassengerAddresses(),
+      passengers: await this.getPassengerInfo(),
+    });
   }
 
   async logAppBalance() {
@@ -329,6 +296,11 @@ export default class Contract {
       .doesSenderMeetAuthorizationRequirements()
       .call({ from: await this.getActiveAccount() });
     console.log("logDoesSenderMeetAuthorizationRequirements", { response });
+  }
+
+  async logPassengerFlightInsurance() {
+    const flightInsurance = await this.getPassengerFlightInsurance();
+    console.log("logPassengerFlightInsurance", { flightInsurance });
   }
 
   /********************************************************************************************/
@@ -419,6 +391,63 @@ export default class Contract {
       .send({ from: await this.getActiveAccount(), gas: Config.gas });
   }
 
+  async getPassengerAddresses() {
+    const passengerAddresses = [];
+    const numPassengers = await this.flightSuretyData.methods
+      .numPassengers()
+      .call({ from: this.owner });
+    for (let i = 0; i < numPassengers; i++) {
+      const passengerAddress = await this.flightSuretyData.methods
+        .passengerAddresses(i)
+        .call({ from: this.owner });
+      passengerAddresses.push(passengerAddress);
+    }
+    return passengerAddresses;
+  }
+
+  async getPassengerInfo() {
+    const passengers = [];
+    const passengerAddresses = await this.getPassengerAddresses();
+    for (let i = 0; i < passengerAddresses.length; i++) {
+      const passenger = await this.flightSuretyData.methods
+        .passengers(passengerAddresses[i])
+        .call({ from: this.owner });
+      passengers.push(passenger);
+    }
+    return passengers;
+  }
+
+  async getPassengerFlightInsurance() {
+    const passengerAddresses = await this.getPassengerAddresses();
+    const flightInsurance = {};
+    for (let passengerAddress of passengerAddresses) {
+      flightInsurance[passengerAddress] = {};
+
+      const numFlightsPurchased = await this.flightSuretyData.methods
+        .numFlightsPurchased(passengerAddress)
+        .call({ from: this.owner });
+
+      const flightIds = [];
+      for (let i = 0; i < numFlightsPurchased.length; i++) {
+        const flightId = await this.flightSuretyData.methods
+          .passengerFlightsPurchased(passengerAddress, i)
+          .call({ from: this.owner });
+        flightIds.push(flightId);
+      }
+
+      for (let flightId of flightIds) {
+        flightInsurance[passengerAddress][
+          flightId
+        ] = await this.flightSuretyData.methods
+          .passengerFlightInsurance(passengerAddress, flightId)
+          .call({ from: this.owner });
+      }
+    }
+    // console.log({ passengerAddress, flightsPurchased });
+
+    return flightInsurance;
+  }
+
   /********************************************************************************************/
   //                                     ORACLE ACTIONS
   /********************************************************************************************/
@@ -430,7 +459,7 @@ export default class Contract {
       (airline) =>
         airline.name.toLowerCase() === flightInfo.airline.toLowerCase()
     )[0];
-    const airlineAddress = airline?.account;
+    const airlineAddress = airline?.airlineAddress;
     console.log("fetchFlightStatus", {
       flightInfo,
       airlines,

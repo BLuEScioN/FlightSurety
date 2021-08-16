@@ -5,10 +5,8 @@ import Web3 from "web3";
 import express from "express";
 import cors from "cors";
 import "babel-polyfill";
-import HDWalletProvider from "@truffle/hdwallet-provider";
-import fs from "fs";
-// var HDWalletProvider = require("@truffle/hdwallet-provider");
-// const fs = require("fs");
+// import HDWalletProvider from "@truffle/hdwallet-provider";
+// import fs from "fs";
 
 /********************************************************************************************/
 //                                    INITIALIZATION WEB3
@@ -75,7 +73,6 @@ let defaultStatus = STATUS_CODE_ON_TIME;
 
 async function getOracleAccounts() {
   const accounts = await web3.eth.getAccounts();
-  console.log("server.js, getOracleAccounts", { accounts });
   const oracleAccounts = accounts.slice(10, 10 + oracleCount);
   console.log("server.js, getOracleAccounts", { oracleAccounts });
 
@@ -114,21 +111,37 @@ initializeOracles();
 //                                    EVENT CODE
 /********************************************************************************************/
 
-// Just log all flightSuretyDataContract events
-flightSuretyDataContract.events.allEvents(
-  {
-    fromBlock: "latest",
-  },
-  function(error, event) {
-    if (error) {
-      console.log("error");
-      console.log(error);
-    } else {
-      console.log("event:");
-      console.log(event);
-    }
-  }
-);
+// flightSuretyDataContract.events.allEvents(
+//   {
+//     fromBlock: "latest",
+//   },
+//   function(error, event) {
+//     if (error) {
+//       console.log("error");
+//       console.log(error);
+//     } else {
+//       console.log("event:");
+//       console.log(`${event.event}`);
+//       console.log(event);
+//     }
+//   }
+// );
+
+// flightSuretyAppContract.events.allEvents(
+//   {
+//     fromBlock: "latest",
+//   },
+//   function(error, event) {
+//     if (error) {
+//       console.log("error");
+//       console.log(error);
+//     } else {
+//       console.log("event:");
+//       console.log(`${event.event}`);
+//       console.log(event);
+//     }
+//   }
+// );
 
 /********************************************************************************************/
 //                                    ORACLE CODE
@@ -164,10 +177,30 @@ flightSuretyAppContract.events.OracleRequest(
           airline,
           flight,
           timestamp,
-          statusCode
+          flightStatus
         );
       }
     }
+  }
+);
+
+// flightSuretyAppContract.events.OracleReport(
+//   {
+//     fromBlock: "latest",
+//   },
+//   function(error, event) {
+//     if (error) console.error(error);
+//     console.log("Server.js, Oracle Report event detected", { event });
+//   }
+// );
+
+flightSuretyAppContract.events.FlightStatusInfo(
+  {
+    fromBlock: "latest",
+  },
+  function(error, event) {
+    if (error) console.error(error);
+    console.log("Server.js, FlightStatusInfo event detected", { event });
   }
 );
 
@@ -187,7 +220,13 @@ function submitOracleResponse(
   statusCode
 ) {
   flightSuretyAppContract.methods
-    .submitOracleResponse(index, airline, flightId, timestamp, statusCode)
+    .submitOracleResponse(
+      index,
+      airline,
+      flightId,
+      timestamp,
+      STATUS_CODE_LATE_AIRLINE
+    ) // TODO: change STATUS_CODE_LATE_AIRLINE back to statusCode
     .send({
       from: oracleAddress,
       gas: config.gas,

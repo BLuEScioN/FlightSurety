@@ -52,6 +52,13 @@ import moment, { unix } from "moment-timezone";
       }
     );
 
+    DOM.elid("log-passenger-flight-insurance").addEventListener(
+      "click",
+      async () => {
+        contract.logPassengerFlightInsurance();
+      }
+    );
+
     /********************************************************************************************/
     //                                     AIRLINE ACTIONS
     /********************************************************************************************/
@@ -81,7 +88,7 @@ import moment, { unix } from "moment-timezone";
 
     // REGISTER FLIGHT
     DOM.elid("register-flight-1").addEventListener("click", async () => {
-      const airlineName = "first airline";
+      const airlineName = "first";
       const flightId = 1;
       const departure = "seattle";
       const arrival = "cincinnati";
@@ -98,7 +105,7 @@ import moment, { unix } from "moment-timezone";
     });
 
     DOM.elid("register-flight-2").addEventListener("click", async () => {
-      const airlineName = "first airline";
+      const airlineName = "first";
       const flightId = 2;
       const departure = "seattle";
       const arrival = "nyc";
@@ -115,7 +122,7 @@ import moment, { unix } from "moment-timezone";
     });
 
     DOM.elid("register-flight-3").addEventListener("click", async () => {
-      const airlineName = "first airline";
+      const airlineName = "first";
       const flightId = 3;
       const departure = "seattle";
       const arrival = "milan";
@@ -132,7 +139,7 @@ import moment, { unix } from "moment-timezone";
     });
 
     DOM.elid("register-flight-4").addEventListener("click", async () => {
-      const airlineName = "first airline";
+      const airlineName = "first";
       const flightId = 4;
       const departure = "cincinnati";
       const arrival = "seattle";
@@ -158,9 +165,6 @@ import moment, { unix } from "moment-timezone";
       let payment = DOM.elid("insurance-payment").value;
       contract.buyFlightInsurance(flightId, payment);
     });
-
-    // PASSENGER CHECKS CREDIT
-    DOM.elid("check-credit").addEventListener("click", () => {});
 
     // PASSENGER WITHDRAWS FLIGHT INSURANCE PAYOUT
     DOM.elid("claim-credit").addEventListener("click", () => {
@@ -214,102 +218,102 @@ import moment, { unix } from "moment-timezone";
   });
 })();
 
-let flightCount = 0;
+// let flightCount = 0;
 
-function flightDisplay(flight, destination, airlineName, time) {
-  var table = DOM.elid("flights-display");
+// function flightDisplay(flight, destination, airlineName, time) {
+//   var table = DOM.elid("flights-display");
 
-  flightCount++;
-  var row = table.insertRow(flightCount);
-  row.id = flight;
+//   flightCount++;
+//   var row = table.insertRow(flightCount);
+//   row.id = flight;
 
-  var cell1 = row.insertCell(0);
-  var cell2 = row.insertCell(1);
-  var cell3 = row.insertCell(2);
-  var cell4 = row.insertCell(3);
+//   var cell1 = row.insertCell(0);
+//   var cell2 = row.insertCell(1);
+//   var cell3 = row.insertCell(2);
+//   var cell4 = row.insertCell(3);
 
-  var date = new Date(+time);
-  // Add some text to the new cells:
-  cell1.innerHTML = "<b>✈ " + flight + "</b>";
-  cell1.setAttribute("data-toggle", "tooltip");
-  cell1.setAttribute("data-placement", "top");
-  cell1.title = "Click on flight code to copy";
-  cell2.innerHTML = destination.toUpperCase();
-  cell3.innerHTML = date.getHours() + ":" + date.getMinutes();
-  cell4.innerHTML = "ON TIME";
-  cell4.style = "color:green";
-  $('[data-toggle="tooltip"]')
-    .tooltip()
-    .mouseover();
-  setTimeout(function() {
-    $('[data-toggle="tooltip"]').tooltip("hide");
-  }, 3000);
-}
+//   var date = new Date(+time);
+//   // Add some text to the new cells:
+//   cell1.innerHTML = "<b>✈ " + flight + "</b>";
+//   cell1.setAttribute("data-toggle", "tooltip");
+//   cell1.setAttribute("data-placement", "top");
+//   cell1.title = "Click on flight code to copy";
+//   cell2.innerHTML = destination.toUpperCase();
+//   cell3.innerHTML = date.getHours() + ":" + date.getMinutes();
+//   cell4.innerHTML = "ON TIME";
+//   cell4.style = "color:green";
+//   $('[data-toggle="tooltip"]')
+//     .tooltip()
+//     .mouseover();
+//   setTimeout(function() {
+//     $('[data-toggle="tooltip"]').tooltip("hide");
+//   }, 3000);
+// }
 
-function addAirlineOption(airlineName, hash) {
-  var dropdown = DOM.elid("airlineDropdownOptions");
+// function addAirlineOption(airlineName, hash) {
+//   var dropdown = DOM.elid("airlineDropdownOptions");
 
-  let newOption = DOM.button(
-    { className: "dropdown-item", value: hash, type: "button" },
-    airlineName
-  );
-  dropdown.appendChild(newOption);
-}
+//   let newOption = DOM.button(
+//     { className: "dropdown-item", value: hash, type: "button" },
+//     airlineName
+//   );
+//   dropdown.appendChild(newOption);
+// }
 
-function displaySpinner() {
-  document.getElementById("oracles-spinner").hidden = false;
-  document.getElementById("submit-oracle").disabled = true;
-}
+// function displaySpinner() {
+//   document.getElementById("oracles-spinner").hidden = false;
+//   document.getElementById("submit-oracle").disabled = true;
+// }
 
-function hideSpinner() {
-  document.getElementById("oracles-spinner").hidden = true;
-  document.getElementById("submit-oracle").disabled = false;
-}
+// function hideSpinner() {
+//   document.getElementById("oracles-spinner").hidden = true;
+//   document.getElementById("submit-oracle").disabled = false;
+// }
 
-function changeFlightStatus(flight, status, newTime) {
-  console.log(status);
-  var row = DOM.elid(flight);
-  row.deleteCell(3);
-  row.deleteCell(2);
-  var cell3 = row.insertCell(2);
-  var cell4 = row.insertCell(3);
-  let statusText = "";
-  switch (status) {
-    case "10":
-      statusText = "ON TIME";
-      cell3.style = "color:white";
-      cell4.style = "color:green";
-      break;
-    case "20":
-      statusText = "LATE AIRLINE";
-      cell3.style = "color:red";
-      cell4.style = "color:red";
-      break;
-    case "30":
-      statusText = "LATE WEATHER";
-      cell3.style = "color:red";
-      cell4.style = "color:yellow";
-      break;
-    case "40":
-      statusText = "LATE TECHNICAL";
-      cell3.style = "color:red";
-      cell4.style = "color:yellow";
-      break;
-    case "50":
-      statusText = "LATE OTHER";
-      cell3.style = "color:red";
-      cell4.style = "color:yellow";
-      break;
-    default:
-      statusText = "UNKNOWN";
-      cell3.style = "color:white";
-      cell4.style = "color:white";
-      break;
-  }
-  cell3.innerHTML = getTimeFromTimestamp(newTime);
-  cell4.innerHTML = statusText;
-}
+// function changeFlightStatus(flight, status, newTime) {
+//   console.log(status);
+//   var row = DOM.elid(flight);
+//   row.deleteCell(3);
+//   row.deleteCell(2);
+//   var cell3 = row.insertCell(2);
+//   var cell4 = row.insertCell(3);
+//   let statusText = "";
+//   switch (status) {
+//     case "10":
+//       statusText = "ON TIME";
+//       cell3.style = "color:white";
+//       cell4.style = "color:green";
+//       break;
+//     case "20":
+//       statusText = "LATE AIRLINE";
+//       cell3.style = "color:red";
+//       cell4.style = "color:red";
+//       break;
+//     case "30":
+//       statusText = "LATE WEATHER";
+//       cell3.style = "color:red";
+//       cell4.style = "color:yellow";
+//       break;
+//     case "40":
+//       statusText = "LATE TECHNICAL";
+//       cell3.style = "color:red";
+//       cell4.style = "color:yellow";
+//       break;
+//     case "50":
+//       statusText = "LATE OTHER";
+//       cell3.style = "color:red";
+//       cell4.style = "color:yellow";
+//       break;
+//     default:
+//       statusText = "UNKNOWN";
+//       cell3.style = "color:white";
+//       cell4.style = "color:white";
+//       break;
+//   }
+//   cell3.innerHTML = getTimeFromTimestamp(newTime);
+//   cell4.innerHTML = statusText;
+// }
 
-function getTimeFromTimestamp(timestamp) {
-  return new Date(timestamp * 1000).toLocaleTimeString("es-ES").slice(0, -3);
-}
+// function getTimeFromTimestamp(timestamp) {
+//   return new Date(timestamp * 1000).toLocaleTimeString("es-ES").slice(0, -3);
+// }
